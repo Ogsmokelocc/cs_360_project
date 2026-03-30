@@ -89,38 +89,37 @@
     </nav>
 
     <!-- Form -->>
-    <div class="container form-container">
+    <div class = "container form-container">
         <h1 style = "font-size: 50px;">Create your account</h1>
 
-        <form onsubmit="redirectUser(event)">
-            <div class="mb-4">
-                <label class="form-label">FIRST NAME</label>
-                <input type="text" class="form-control" placeholder="first name">
+        <form>
+            <div class = "mb-4">
+                <label class = "form-label">FIRST NAME</label>
+                <input type = "text" id = "firstname" class = "form-control" placeholder = "first name">
             </div>
 
-            <div class="mb-4">
-                <label class="form-label">LAST NAME</label>
-                <input type="text" class="form-control" placeholder="last name">
+            <div class = "mb-4">
+                <label class = "form-label">LAST NAME</label>
+                <input type = "text" id = "lastname" class = "form-control" placeholder = "last name">
             </div>
 
-            <div class="mb-4">
-                <label class="form-label">EMAIL ADDRESS</label>
-                <input type="email" class="form-control" placeholder="bullmarket@example.com">
+            <div class = "mb-4">
+                <label class = "form-label">EMAIL ADDRESS</label>
+                <input type = "email" id = "email" class = "form-control" placeholder = "bullmarket@example.com">
             </div>
 
-            <div class="mb-4">
-                <label class="form-label">PASSWORD</label>
-                <input type="password" class="form-control" placeholder="**********">
+            <div class = "mb-4">
+                <label class = "form-label">PASSWORD</label>
+                <input type = "password" id = "password" class = "form-control" placeholder = "**********">
             </div>
 
-            <button class="btn btn-custom w-100">CREATE ACCOUNT →</button>
+            <button type = "button" class = "btn btn-custom w-100" onclick="redirectUser()">CREATE ACCOUNT →</button>
 
-            <p class="text-center footer-text"> Already a member? <a href="signin.html">Sign in</a> </p>
+            <p class = "text-center footer-text"> Already a member? <a href = "signin.html">Sign in</a> </p>
         </form>
 
-        <script id="r8lq3n">
+        <script id = "r8lq3n">
             function redirectUser(event) {
-                event.preventDefault(); 
                 window.location.href = "index.html";
             }
         </script>
