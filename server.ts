@@ -19,7 +19,7 @@ app.use(express.json());
 
 
 
-// Fetch markets from Polymarket Gamma API
+// Fetch markets from Polymarket Gamma API// will delete once we get our own dat
 app.get("/markets", async (req, res) => {
     try {
         const response = await fetch("https://gamma-api.polymarket.com/markets");
