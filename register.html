@@ -112,17 +112,55 @@
                 <label class = "form-label">PASSWORD</label>
                 <input type = "password" id = "password" class = "form-control" placeholder = "**********">
             </div>
-
-            <button type = "button" class = "btn btn-custom w-100" onclick="redirectUser()">CREATE ACCOUNT →</button>
-
-            <p class = "text-center footer-text"> Already a member? <a href = "signin.html">Sign in</a> </p>
+            
+            <button type="button" class="btn btn-custom w-100" onclick="registerUser()">
+            CREATE ACCOUNT →
+            </button>
+            <p id="error-msg" style="color: #D72323; text-align: center; margin-top: 10px;"></p>
+            <p class="text-center footer-text">Already a member? <a href="signin.html">Sign in</a></p>
         </form>
 
-        <script id = "r8lq3n">
-            function redirectUser(event) {
-                window.location.href = "index.html";
+       <script>
+            async function registerUser() {
+            // gets the values from the form
+            const firstname = document.getElementById('firstname').value.trim();
+            const lastname  = document.getElementById('lastname').value.trim();
+            const email     = document.getElementById('email').value.trim();
+            const password  = document.getElementById('password').value;
+            const errorMsg  = document.getElementById('error-msg');
+
+            // does validation
+            if (!firstname || !lastname || !email || !password) {
+                errorMsg.textContent = 'Please fill in all fields.';
+                return;
             }
-        </script>
+
+            // sends the data to server using  fetch
+            try {
+                const response = await fetch('http://localhost:3000/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'  // sends json
+                },
+                body: JSON.stringify({ firstname, lastname, email, password })
+                });
+
+                const data = await response.json(); //server response
+
+                if (response.ok) {
+                // good
+                window.location.href = 'index.html';
+                } else {
+                // bad
+                errorMsg.textContent = data.error ?? 'Registration failed.';
+                }
+
+            } catch (err) {
+                // network error
+                errorMsg.textContent = 'Could not connect to server.';
+            }
+            }
+            </script>
 
     </div>
 
