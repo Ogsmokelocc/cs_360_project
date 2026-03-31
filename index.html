@@ -101,7 +101,7 @@
                     height="100" class="me-2">
                 <span>BULL MARKET</span>
             </a>
-            <div class="d-flex ms-auto">
+            <div class="d-flex ms-auto" id="nav-auth">
                 <a href="signin.html" class="btn btn-outline-dark me-2">Sign in</a>
                 <a href="register.html" class="btn btn-dark">Register</a>
             </div>
@@ -231,6 +231,27 @@
         }
 
         loadMarkets();
+    </script>
+    <script>
+    // see if logged in
+    const stored = localStorage.getItem('user');
+
+    if (stored) {
+        const user = JSON.parse(stored);
+        const navAuth = document.getElementById('nav-auth');
+
+        //replace the buttons
+        navAuth.innerHTML = `
+        <span class="navbar-text me-3">👤 ${user.username}</span>
+        <button class="btn btn-outline-dark" onclick="logout()">Log out</button>
+        `;
+    }
+
+    function logout() {
+        // clear stored info
+        localStorage.removeItem('user');
+        window.location.reload();
+    }
     </script>
 
 </body>

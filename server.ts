@@ -37,6 +37,7 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
 });
 
+//register
 app.post('/register', async (req: Request, res: Response) => {
   //pull  data out of the request body
   const { firstname, lastname, email, password } = req.body;
@@ -79,5 +80,65 @@ app.post('/register', async (req: Request, res: Response) => {
     } else {
       res.status(500).json({ error: 'Registration failed' });
     }
+  }
+});
+
+//sign in
+app.post('/login', async (req: Request, res: Response) => {
+  const { email, password } = req.body;
+
+  if (!email || !password) {
+    res.status(400).json({ error: 'All fields are required' });
+    return;
+  }
+
+  try {
+    const isEmail = email.includes('@');
+
+    const [rows] = await db.query(
+      isEmail
+        ? 'SELECT * FROM users WHERE email = ?'
+        : 'SELECT * FROM users WHERE username = ?',
+      [email]
+    );
+
+    const users = rows as Array<{
+      user_id: number;
+      username: string;
+      email: string;
+      password_hash: string;
+    }>;
+
+    if (users.length === 0) {
+      res.status(401).json({ error: 'Invalid email/username or password' });
+      return;
+    }
+
+    const user = users[0];
+
+    if (!user) {
+      res.status(401).json({ error: 'Invalid email/username or password' });
+      return;
+    }
+
+    const passwordMatch = await bcrypt.compare(password, user.password_hash);
+
+    if (!passwordMatch) {
+      res.status(401).json({ error: 'Invalid email/username or password' });
+      return;
+    }
+
+    res.json({
+      success: true,
+      user: {
+        id: user.user_id,
+        username: user.username,
+        email: user.email,
+      }
+    });
+
+  } catch (err) {
+    console.error('Login error:', err);
+    res.status(500).json({ error: 'Login failed' });
   }
 });
