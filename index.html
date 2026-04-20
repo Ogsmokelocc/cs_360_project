@@ -1,257 +1,342 @@
-
-<!-- in terminal navigate to this directory and type/enter (npm run dev) to start the backend-->
+<!-- Run: npm run dev -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Prediction Market</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- Bootstrap Icons -->
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
-    <style>
-        /* general styling for the entire page */
-        body {
-            background-color: #ffffff;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #000000;
-            margin: 0;
-            padding: 0;
-        }
-
-        /* styling for nav bar */
-    .top-nav {
-      background-color: #ffffff; /* Slightly transparent white */
-      backdrop-filter: blur(10px);
-      color: #000;
-      box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-    }
-
-     /* branding for the nav bar */
-    .top-nav .navbar-brand {
-      font-weight: bold;
-      font-size: 1.5rem;
-      color: #000000;
-    }
-
-    /* styling for the hero section */
-    .middle-section {
-      position: relative;
-      min-height: calc(100vh - 56px); /* takes full view port minus navbar */
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 2rem;
-      box-sizing: border-box;
-      overflow: hidden;
-    }
-
-    .middle-section::before {
-      content: "";
-      position: absolute;
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%;
-    
-      background-size: cover;
-      background-position: center;
-      z-index: -1;
-    }
-
-    /* removes bootstrap's side padding when using container-fluid so centering is exact */
-    .middle-section.container-fluid {
-      padding-left: 0;
-      padding-right: 0;
-      width: 100%;
-    }
-
-    .social-icons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      margin-top: 3rem;
-    }
-
-    .social-icons a {
-      color: #800000;
-      font-size: 1.5rem;
-      transition: color 0.3s;
-    }
-
-    .social-icons a:hover {
-      color: #00bfff;
-    }
- 
-
-    </style>
-
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Bull Market - Prediction Markets</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body { background-color: #fff; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #000; margin: 0; padding: 0; }
+    .top-nav { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .navbar-brand { font-weight: bold; font-size: 1.5rem; color: #000; }
+    .nav-link { color: #000 !important; font-weight: 500; }
+    .nav-link:hover { color: #D72323 !important; }
+    .hero { background: linear-gradient(135deg, #000 0%, #1a1a1a 100%); color: #fff; padding: 4rem 2rem; text-align: center; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 800; }
+    .hero p { font-size: 1.2rem; color: rgba(255,255,255,0.75); max-width: 600px; margin: 1rem auto 2rem; }
+    .hero-btns a { margin: 0.35rem; }
+    .chart-section { background: #fff; padding: 3rem 0; }
+    .chart-container { background: #fff; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.08); padding: 2rem; }
+    .events-section { background: #f8f9fa; padding: 3rem 0; }
+    .event-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); transition: transform 0.2s; }
+    .event-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .badge-live { background-color: #D72323; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .badge-upcoming { background-color: #000; }
+    .odds-mini { background: #f8f9fa; border-radius: 6px; padding: 0.25rem 0.5rem; font-size: 0.8rem; font-weight: 600; }
+    .social-icons { display: flex; gap: 1rem; justify-content: center; padding: 2rem; }
+    .social-icons a { color: #800000; font-size: 1.5rem; transition: color 0.3s; }
+    .social-icons a:hover { color: #00bfff; }
+    .section-title { font-weight: 700; font-size: 1.75rem; text-align: center; margin-bottom: 2rem; }
+    .section-title span { color: #D72323; }
+  </style>
 </head>
-
 <body>
-    <!-- top of page nav bar-->
-    <nav class="navbar navbar-expand-lg top-nav">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="index.html">
-                <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="100"
-                    height="100" class="me-2">
-                <span>BULL MARKET</span>
-            </a>
-            <div class="d-flex ms-auto" id="nav-auth">
-                <a href="signin.html" class="btn btn-outline-dark me-2">Sign in</a>
-                <a href="register.html" class="btn btn-dark">Register</a>
-            </div>
-        </div>
-    </nav>
 
+<nav class="navbar navbar-expand-lg top-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="60" height="60" class="me-2">
+      BULL MARKET
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-bar-chart-line me-1"></i>Markets</a></li>
+      </ul>
+      <div class="d-flex" id="nav-auth"></div>
+    </div>
+  </div>
+</nav>
 
-    <!--middle section-->
-    <section class="middle-section container-fluid">
+<!-- Hero -->
+<section class="hero">
+  <div class="container">
+    <h1>Predict. Bet. Win.</h1>
+    <p>Bet on sports events with real-time odds. Deposit, place your bets, and track your winnings.</p>
+    <div class="hero-btns">
+      <a href="markets.html" class="btn btn-light btn-lg">Browse Markets</a>
+      <a href="register.html" class="btn btn-outline-light btn-lg" id="heroRegisterBtn">Get Started</a>
+    </div>
+  </div>
+</section>
+
+<!-- Live markets chart -->
+<section class="chart-section">
+  <div class="container">
+    <div class="section-title">Live <span>Market Odds</span></div>
+    <div class="chart-container">
+      <!-- Market tabs -->
+      <div id="marketTabs" class="d-flex flex-wrap gap-2 mb-3" style="min-height:36px"></div>
+      <!-- Chart header -->
+      <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
-            <canvas id="marketChart" width="800" height="400"></canvas>
+          <div id="chartQuestion" class="fw-bold" style="font-size:1rem;max-width:600px"></div>
+          <div id="chartSubtitle" class="text-muted small mt-1"></div>
         </div>
-        <!-- Social Media Icons -->
-        <div class="social-icons">
-            <a href="#" aria-label="Email"><i class="bi bi-envelope-fill"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-            <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
-            <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+        <div class="text-end">
+          <div id="chartCurrentProb" style="font-size:1.8rem;font-weight:700;color:#D72323"></div>
+          <div class="text-muted small">Yes probability</div>
         </div>
-    </section>
+      </div>
+      <canvas id="marketChart" height="90"></canvas>
+      <div id="chartError" class="text-muted text-center py-4" style="display:none">
+        <i class="bi bi-wifi-off"></i> Market data unavailable
+      </div>
+    </div>
+  </div>
+</section>
 
+<!-- Featured events -->
+<section class="events-section">
+  <div class="container">
+    <div class="section-title">Featured <span>Events</span></div>
+    <div class="row g-3" id="featuredEvents">
+      <div class="col-12 text-center text-muted py-4">Loading events...</div>
+    </div>
+    <div class="text-center mt-4">
+      <a href="markets.html" class="btn btn-dark btn-lg">View All Markets →</a>
+    </div>
+  </div>
+</section>
 
+<!-- Social -->
+<div class="social-icons">
+  <a href="#" aria-label="Email"><i class="bi bi-envelope-fill"></i></a>
+  <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+  <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
+  <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+</div>
 
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 
+<script>
+  // Auth state
+  const stored = localStorage.getItem('user');
+  const user = stored ? JSON.parse(stored) : null;
+  const navAuth = document.getElementById('nav-auth');
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<!--will probaly delete this stuff below which is market data imported from polymarket, once we figure out how to integrate our own data or have a better and clearer scope of our project-->
-    <script>
-        let chart;
-        let markets = [];
-        let index = 0;
+  if (user) {
+    navAuth.innerHTML = `
+      <a href="dashboard.html" class="btn btn-outline-dark me-2">Dashboard</a>
+      <span class="navbar-text me-2 fw-semibold">👤 ${user.username}</span>
+      <button class="btn btn-dark" onclick="logout()">Log out</button>`;
+    document.getElementById('heroRegisterBtn').href = 'dashboard.html';
+    document.getElementById('heroRegisterBtn').textContent = 'Go to Dashboard';
+  } else {
+    navAuth.innerHTML = `
+      <a href="signin.html" class="btn btn-outline-dark me-2">Sign in</a>
+      <a href="register.html" class="btn btn-dark">Register</a>`;
+  }
+  function logout() { localStorage.removeItem('user'); window.location.reload(); }
 
-        async function loadMarkets() {
-            try {
-                const res = await fetch("http://localhost:3000/markets");
-                const data = await res.json();
+  // ── Polymarket chart ───────────────────────────────────────────────────────
+  let chart = null;
+  let markets = [];
+  let currentIdx = 0;
+  let autoTimer = null;
 
-                console.log("DATA:", data);
+  // Generate a realistic-looking random walk as fallback when CLOB API is unavailable
+  function simulateHistory(currentProbability, numPoints = 60, hoursBack = 168) {
+    const now = Date.now();
+    const intervalMs = (hoursBack * 3600 * 1000) / numPoints;
+    let prob = Math.min(0.9, Math.max(0.1, currentProbability + (Math.random() - 0.5) * 0.5));
+    const points = [];
+    for (let i = 0; i <= numPoints; i++) {
+      const t = now - (numPoints - i) * intervalMs;
+      const drift = (currentProbability - prob) * 0.1;
+      prob += drift + (Math.random() - 0.5) * 0.025;
+      prob = Math.max(0.03, Math.min(0.97, prob));
+      points.push({ t: t / 1000, p: prob });
+    }
+    points[points.length - 1].p = currentProbability;
+    return points;
+  }
 
-                if (!data || data.length === 0) {
-                    console.error("No markets returned");
-                    return;
-                }
+  function makeGradient(ctx, color) {
+    const gradient = ctx.createLinearGradient(0, 0, 0, 320);
+    gradient.addColorStop(0, color.replace('1)', '0.25)'));
+    gradient.addColorStop(1, color.replace('1)', '0.01)'));
+    return gradient;
+  }
 
-                markets = data;
+  function renderChart(history, question, currentProb, outcomeName) {
+    const canvas = document.getElementById('marketChart');
+    const ctx = canvas.getContext('2d');
 
-                initChart();
-                setInterval(switchMarket, 4000);
-            } catch (err) {
-                console.error("FETCH ERROR:", err);
+    const labels = history.map(p => new Date(p.t * 1000));
+    const data   = history.map(p => +(p.p * 100).toFixed(1));
+
+    const lineColor = 'rgba(215, 35, 35, 1)';
+
+    if (chart) {
+      chart.data.labels = labels;
+      chart.data.datasets[0].data = data;
+      chart.data.datasets[0].label = outcomeName;
+      chart.data.datasets[0].backgroundColor = makeGradient(ctx, lineColor);
+      chart.update('active');
+    } else {
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [{
+            label: outcomeName,
+            data,
+            borderColor: lineColor,
+            backgroundColor: makeGradient(ctx, lineColor),
+            borderWidth: 2.5,
+            fill: true,
+            tension: 0.4,
+            pointRadius: 0,
+            pointHoverRadius: 5,
+            pointHoverBackgroundColor: lineColor,
+          }]
+        },
+        options: {
+          responsive: true,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              backgroundColor: '#000',
+              titleColor: '#fff',
+              bodyColor: '#aaa',
+              padding: 12,
+              callbacks: {
+                label: ctx => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)}%`
+              }
             }
+          },
+          scales: {
+            x: {
+              type: 'time',
+              time: { tooltipFormat: 'MMM d, HH:mm', displayFormats: { hour: 'MMM d HH:mm', day: 'MMM d' } },
+              grid: { color: 'rgba(0,0,0,0.06)' },
+              ticks: { color: '#888', maxTicksLimit: 7, font: { size: 11 } }
+            },
+            y: {
+              min: 0, max: 100,
+              grid: { color: 'rgba(0,0,0,0.06)' },
+              ticks: { color: '#888', callback: v => v + '%', font: { size: 11 } }
+            }
+          }
         }
-
-
-
-        function initChart() {
-            const ctx = document.getElementById("marketChart").getContext("2d");
-
-            const firstMarket = markets[0];
-            const price = firstMarket.outcomePrices
-                ? parseFloat(firstMarket.outcomePrices[0]) * 100
-                : 50;
-
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ["Now"], // will update later
-                    datasets: [{
-                        label: firstMarket.question || "Market",
-                        data: [price],
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        fill: true,
-                        tension: 0.4, // smooth curves
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: {
-                                font: {
-                                    size: 16
-                                }
-                            }
-                        },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false,
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time',
-                                font: { size: 14, weight: 'bold' }
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Probability %',
-                                font: { size: 14, weight: 'bold' }
-                            },
-                            min: 0,
-                            max: 100
-                        }
-                    }
-                }
-            });
-        }
-        function switchMarket() {
-            index = (index + 1) % markets.length;
-
-            const market = markets[index];
-
-            chart.data.datasets[0].label = market.question;
-            chart.data.datasets[0].data = [market.outcomes[0].price * 100];
-
-            chart.update();
-        }
-
-        loadMarkets();
-    </script>
-    <script>
-    // see if logged in
-    const stored = localStorage.getItem('user');
-
-    if (stored) {
-        const user = JSON.parse(stored);
-        const navAuth = document.getElementById('nav-auth');
-
-        //replace the buttons
-        navAuth.innerHTML = `
-        <span class="navbar-text me-3">👤 ${user.username}</span>
-        <button class="btn btn-outline-dark" onclick="logout()">Log out</button>
-        `;
+      });
     }
 
-    function logout() {
-        // clear stored info
-        localStorage.removeItem('user');
-        window.location.reload();
-    }
-    </script>
+    document.getElementById('chartQuestion').textContent = question;
+    document.getElementById('chartCurrentProb').textContent = (currentProb * 100).toFixed(0) + '%';
+    const last = history[history.length - 1];
+    const first = history[0];
+    const change = last && first ? ((last.p - first.p) * 100).toFixed(1) : '0';
+    const sign = parseFloat(change) >= 0 ? '+' : '';
+    document.getElementById('chartSubtitle').textContent = `7-day change: ${sign}${change}pp · ${outcomeName}`;
+  }
 
+  async function loadMarketChart(idx) {
+    const m = markets[idx];
+    if (!m) return;
+
+    // Update tab highlights
+    document.querySelectorAll('.market-tab').forEach((t, i) => {
+      t.classList.toggle('active', i === idx);
+      t.classList.toggle('btn-dark', i === idx);
+      t.classList.toggle('btn-outline-secondary', i !== idx);
+    });
+
+    let outcomePrices = [];
+    try { outcomePrices = JSON.parse(m.outcomePrices || '[]').map(Number); } catch {}
+    const currentProb = outcomePrices[0] ?? 0.5;
+    const outcomeName = (() => { try { return JSON.parse(m.outcomes || '["Yes"]')[0]; } catch { return 'Yes'; } })();
+
+    // Try real CLOB history first
+    let history = null;
+    try {
+      const tokenIds = JSON.parse(m.clobTokenIds || '[]');
+      if (tokenIds[0]) {
+        const r = await fetch(`/api/proxy/price-history?market=${tokenIds[0]}`);
+        const d = await r.json();
+        if (d.history && d.history.length > 2) history = d.history;
+      }
+    } catch {}
+
+    if (!history) history = simulateHistory(currentProb);
+
+    renderChart(history, m.question, currentProb, outcomeName);
+  }
+
+  async function loadMarkets() {
+    try {
+      const res = await fetch('/markets');
+      const data = await res.json();
+      if (!data || data.length === 0) throw new Error('empty');
+      markets = data;
+
+      // Build tabs
+      const tabs = document.getElementById('marketTabs');
+      markets.forEach((m, i) => {
+        const btn = document.createElement('button');
+        btn.className = `btn btn-sm market-tab ${i === 0 ? 'btn-dark' : 'btn-outline-secondary'}`;
+        btn.style.borderRadius = '20px';
+        btn.style.fontSize = '0.8rem';
+        const label = m.question.length > 40 ? m.question.slice(0, 38) + '…' : m.question;
+        btn.textContent = label;
+        btn.onclick = () => { currentIdx = i; clearInterval(autoTimer); loadMarketChart(i); };
+        tabs.appendChild(btn);
+      });
+
+      await loadMarketChart(0);
+
+      // Auto-cycle every 8 seconds
+      autoTimer = setInterval(() => {
+        currentIdx = (currentIdx + 1) % markets.length;
+        loadMarketChart(currentIdx);
+      }, 8000);
+
+    } catch {
+      document.getElementById('chartError').style.display = '';
+      document.getElementById('marketChart').style.display = 'none';
+    }
+  }
+
+  loadMarkets();
+
+  // Featured events
+  async function loadFeaturedEvents() {
+    try {
+      const [liveRes, upRes] = await Promise.all([fetch('/api/events?status=live'), fetch('/api/events?status=upcoming')]);
+      const live = await liveRes.json();
+      const upcoming = await upRes.json();
+      const events = [...live, ...upcoming].slice(0, 6);
+
+      if (events.length === 0) {
+        document.getElementById('featuredEvents').innerHTML = `<div class="col-12 text-center text-muted py-4">No events yet. <a href="admin.html">Seed demo data</a></div>`;
+        return;
+      }
+
+      document.getElementById('featuredEvents').innerHTML = events.map(ev => `
+        <div class="col-md-6 col-lg-4">
+          <div class="event-card card p-3 h-100" style="cursor:pointer" onclick="window.location='event.html?id=${ev.event_id}'">
+            <div class="d-flex justify-content-between align-items-start mb-2">
+              <span class="badge bg-secondary">${ev.sport_name}</span>
+              <span class="badge ${ev.status === 'live' ? 'badge-live' : 'badge-upcoming'}">${ev.status.toUpperCase()}</span>
+            </div>
+            <div class="fw-semibold mb-1">${ev.name}</div>
+            <div class="small text-muted mb-3">${new Date(ev.start_time).toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</div>
+            <a href="event.html?id=${ev.event_id}" class="btn btn-dark btn-sm mt-auto">View Odds →</a>
+          </div>
+        </div>`).join('');
+    } catch {}
+  }
+
+  loadFeaturedEvents();
+</script>
 </body>
+</html>

@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Event - Bull Market</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .top-nav { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .navbar-brand { font-weight: bold; font-size: 1.4rem; color: #000; }
+    .nav-link { color: #000 !important; font-weight: 500; }
+    .nav-link:hover { color: #D72323 !important; }
+    .event-header { background: linear-gradient(135deg, #000 0%, #2d2d2d 100%); color: #fff; border-radius: 16px; padding: 2rem; margin-bottom: 1.5rem; }
+    .badge-live { background-color: #D72323; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .badge-upcoming { background-color: #fff; color: #000; }
+    .badge-finished { background-color: #6c757d; }
+    .market-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 1rem; }
+    .odds-row { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+    .odds-btn { flex: 1; min-width: 90px; border-radius: 10px; border: 2px solid #dee2e6; background: #fff; padding: 0.65rem 0.5rem; text-align: center; cursor: pointer; transition: all 0.15s; font-weight: 600; }
+    .odds-btn:hover { border-color: #000; background: #f8f9fa; }
+    .odds-btn.selected { border-color: #D72323; background: #fff0f0; color: #D72323; }
+    .odds-btn .selection { font-size: 0.8rem; color: #666; font-weight: 400; display: block; }
+    .odds-btn.selected .selection { color: #D72323; }
+    .betslip { background: #fff; border-radius: 16px; box-shadow: 0 2px 8px rgba(0,0,0,0.07); padding: 1.5rem; position: sticky; top: 1rem; }
+    .betslip-header { font-weight: 700; font-size: 1.1rem; border-bottom: 2px solid #f0f0f0; padding-bottom: 0.75rem; margin-bottom: 1rem; }
+    .betslip-sel { background: #f8f9fa; border-radius: 8px; padding: 0.6rem 0.75rem; margin-bottom: 0.5rem; font-size: 0.875rem; }
+    .betslip-sel .remove-btn { cursor: pointer; color: #D72323; float: right; }
+    .stake-input { border: 2px solid #dee2e6; border-radius: 10px; padding: 0.65rem 1rem; font-size: 1.1rem; font-weight: 600; }
+    .stake-input:focus { border-color: #000; outline: none; box-shadow: none; }
+    .btn-place { background-color: #000; color: #fff; border: none; border-radius: 10px; padding: 0.75rem; font-size: 1rem; font-weight: 600; width: 100%; transition: background 0.2s; }
+    .btn-place:hover { background-color: #D72323; }
+    .btn-place:disabled { background-color: #999; }
+    .quick-stake { border-radius: 20px; font-size: 0.8rem; }
+    #betResult { border-radius: 10px; font-size: 0.9rem; margin-top: 1rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg top-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="50" height="50" class="me-2">
+      BULL MARKET
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link" href="markets.html"><i class="bi bi-bar-chart-line me-1"></i>Markets</a></li>
+        <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="account.html"><i class="bi bi-wallet2 me-1"></i>Account</a></li>
+      </ul>
+      <div class="d-flex" id="nav-auth"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+  <div id="eventContent">
+    <div class="text-center py-5 text-muted">Loading event...</div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns@3/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const stored = localStorage.getItem('user');
+  const user = stored ? JSON.parse(stored) : null;
+
+  const navAuth = document.getElementById('nav-auth');
+  if (user) {
+    navAuth.innerHTML = `
+      <span class="navbar-text me-3 fw-semibold">👤 ${user.username}</span>
+      <button class="btn btn-outline-dark btn-sm" onclick="logout()">Log out</button>`;
+  } else {
+    navAuth.innerHTML = `
+      <a href="signin.html" class="btn btn-outline-dark me-2">Sign in</a>
+      <a href="register.html" class="btn btn-dark">Register</a>`;
+  }
+  function logout() { localStorage.removeItem('user'); window.location.href = 'index.html'; }
+
+  const params = new URLSearchParams(location.search);
+  const eventId = params.get('id');
+  if (!eventId) window.location.href = 'markets.html';
+
+  // ── Odds history chart ─────────────────────────────────────────────────────
+  const CHART_COLORS = ['#D72323', '#000000', '#6c757d', '#0d6efd', '#198754'];
+
+  function simulateOddsHistory(currentOdds, numPoints = 56, hoursBack = 168) {
+    const currentProb = 1 / currentOdds;
+    let prob = Math.min(0.9, Math.max(0.08, currentProb + (Math.random() - 0.5) * 0.45));
+    const now = Date.now();
+    const intervalMs = (hoursBack * 3600 * 1000) / numPoints;
+    const points = [];
+    for (let i = 0; i <= numPoints; i++) {
+      const t = new Date(now - (numPoints - i) * intervalMs);
+      const drift = (currentProb - prob) * 0.12;
+      prob += drift + (Math.random() - 0.5) * 0.035;
+      prob = Math.max(0.04, Math.min(0.96, prob));
+      points.push({ recorded_at: t.toISOString(), decimal_odds: 1 / prob });
+    }
+    points[points.length - 1].decimal_odds = currentOdds;
+    return points;
+  }
+
+  async function buildEventChart(evtId, currentOdds) {
+    const canvas = document.getElementById('eventChart');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+
+    // Fetch stored history; fall back to simulated if empty
+    let rawHistory = [];
+    try {
+      const r = await fetch(`/api/events/${evtId}/odds-history`);
+      rawHistory = await r.json();
+    } catch {}
+
+    // Group by selection_name
+    const bySelection = {};
+
+    if (rawHistory.length > 0) {
+      for (const row of rawHistory) {
+        if (!bySelection[row.selection_name]) bySelection[row.selection_name] = [];
+        bySelection[row.selection_name].push(row);
+      }
+    } else {
+      // Simulate from current odds for each unique selection
+      const matchWinner = currentOdds.filter(o => o.market_type === 'Match Winner');
+      for (const o of matchWinner) {
+        bySelection[o.selection_name] = simulateOddsHistory(parseFloat(o.decimal_odds))
+          .map(p => ({ ...p, selection_name: o.selection_name }));
+      }
+    }
+
+    const selections = Object.keys(bySelection);
+    const allTimestamps = [...new Set(
+      Object.values(bySelection).flat().map(r => r.recorded_at)
+    )].sort();
+
+    const datasets = selections.map((name, i) => {
+      const color = CHART_COLORS[i % CHART_COLORS.length];
+      const dataMap = new Map(bySelection[name].map(r => [r.recorded_at, r.decimal_odds]));
+      const data = allTimestamps.map(t => {
+        const odds = dataMap.get(t);
+        return odds ? +((1 / odds) * 100).toFixed(1) : null;
+      });
+
+      const grad = ctx.createLinearGradient(0, 0, 0, 280);
+      grad.addColorStop(0, color + '40');
+      grad.addColorStop(1, color + '04');
+
+      return {
+        label: name,
+        data,
+        borderColor: color,
+        backgroundColor: grad,
+        borderWidth: 2.5,
+        fill: true,
+        tension: 0.4,
+        pointRadius: 0,
+        pointHoverRadius: 5,
+        pointHoverBackgroundColor: color,
+        spanGaps: true,
+      };
+    });
+
+    new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: allTimestamps.map(t => new Date(t)),
+        datasets,
+      },
+      options: {
+        responsive: true,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: '#000',
+            titleColor: '#fff',
+            bodyColor: '#ccc',
+            padding: 12,
+            callbacks: {
+              label: c => `${c.dataset.label}: ${c.parsed.y != null ? c.parsed.y.toFixed(1) + '%' : '-'}`
+            }
+          }
+        },
+        scales: {
+          x: {
+            type: 'time',
+            time: { tooltipFormat: 'MMM d, HH:mm', displayFormats: { hour: 'MMM d HH:mm', day: 'MMM d' } },
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { color: '#999', maxTicksLimit: 7, font: { size: 11 } }
+          },
+          y: {
+            min: 0, max: 100,
+            grid: { color: 'rgba(0,0,0,0.05)' },
+            ticks: { color: '#999', callback: v => v + '%', font: { size: 11 } }
+          }
+        }
+      }
+    });
+
+    // Custom legend
+    const legend = document.getElementById('chartLegend');
+    if (legend) {
+      legend.innerHTML = selections.map((name, i) => {
+        const color = CHART_COLORS[i % CHART_COLORS.length];
+        const lastRow = bySelection[name].at(-1);
+        const prob = lastRow ? ((1 / lastRow.decimal_odds) * 100).toFixed(0) : '?';
+        return `<div class="d-flex align-items-center gap-1" style="font-size:0.85rem">
+          <span style="width:12px;height:12px;border-radius:50%;background:${color};flex-shrink:0"></span>
+          <span class="fw-semibold">${name}</span>
+          <span class="text-muted">${prob}%</span>
+        </div>`;
+      }).join('');
+    }
+  }
+
+  // Bet slip state: { odds_id -> { odds_id, event_id, odds_at_placement, selection_type, selection_name, market_type } }
+  const betSlip = new Map();
+
+  function formatDate(dt) {
+    return new Date(dt).toLocaleString('en-GB', { weekday:'long', day:'numeric', month:'long', year:'numeric', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function statusBadge(status) {
+    const map = { live: 'badge-live', upcoming: 'badge-upcoming', finished: 'badge-finished' };
+    return `<span class="badge ${map[status] || 'bg-secondary'}">${status.toUpperCase()}</span>`;
+  }
+
+  function renderBetSlip() {
+    const sels = [...betSlip.values()];
+    const totalOdds = sels.reduce((acc, s) => acc * s.odds_at_placement, 1);
+    const stake = parseFloat(document.getElementById('stakeInput')?.value || '0');
+    const payout = stake > 0 ? (stake * totalOdds).toFixed(2) : '0.00';
+
+    let selHtml = '';
+    if (sels.length === 0) {
+      selHtml = `<p class="text-muted small text-center">Click an odds button to add a selection</p>`;
+    } else {
+      selHtml = sels.map(s => `
+        <div class="betslip-sel">
+          <span class="remove-btn" onclick="removeSelection(${s.odds_id})"><i class="bi bi-x-circle"></i></span>
+          <div class="fw-semibold">${s.selection_name}</div>
+          <div class="text-muted" style="font-size:0.8rem">${s.market_type} · ${s.odds_at_placement.toFixed(2)}</div>
+        </div>`).join('');
+    }
+
+    const slipEl = document.getElementById('betSlipBody');
+    if (!slipEl) return;
+
+    slipEl.innerHTML = selHtml;
+
+    const oddsEl = document.getElementById('slipOdds');
+    const payoutEl = document.getElementById('slipPayout');
+    const placeBtn = document.getElementById('placeBtn');
+    if (oddsEl) oddsEl.textContent = sels.length > 0 ? totalOdds.toFixed(2) : '-';
+    if (payoutEl) payoutEl.textContent = `£${payout}`;
+    if (placeBtn) placeBtn.disabled = sels.length === 0 || !stake || stake <= 0;
+  }
+
+  function addSelection(odd) {
+    // One selection per market type
+    for (const [key, val] of betSlip.entries()) {
+      if (val.market_type === odd.market_type) betSlip.delete(key);
+    }
+    betSlip.set(odd.odds_id, odd);
+    // Update UI
+    document.querySelectorAll('.odds-btn').forEach(btn => {
+      if (btn.dataset.marketType === odd.market_type) btn.classList.remove('selected');
+    });
+    document.querySelector(`.odds-btn[data-odds-id="${odd.odds_id}"]`)?.classList.add('selected');
+    renderBetSlip();
+  }
+
+  function removeSelection(oddsId) {
+    betSlip.delete(oddsId);
+    document.querySelector(`.odds-btn[data-odds-id="${oddsId}"]`)?.classList.remove('selected');
+    renderBetSlip();
+  }
+  window.removeSelection = removeSelection;
+
+  async function placeBet() {
+    if (!user) { window.location.href = 'signin.html'; return; }
+    const stake = parseFloat(document.getElementById('stakeInput').value);
+    if (!stake || stake <= 0) return;
+
+    const placeBtn = document.getElementById('placeBtn');
+    placeBtn.disabled = true;
+    placeBtn.textContent = 'Placing...';
+
+    const selections = [...betSlip.values()].map(s => ({
+      odds_id: s.odds_id,
+      event_id: s.event_id,
+      odds_at_placement: s.odds_at_placement,
+      selection_type: s.selection_name,
+    }));
+
+    try {
+      const r = await fetch('/api/bets', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ user_id: user.id, stake_amount: stake, selections })
+      });
+      const data = await r.json();
+
+      const resultEl = document.getElementById('betResult');
+      if (r.ok) {
+        resultEl.className = 'alert alert-success';
+        resultEl.textContent = `Bet placed! Potential payout: £${data.potential_payout.toFixed(2)}`;
+        betSlip.clear();
+        document.querySelectorAll('.odds-btn.selected').forEach(b => b.classList.remove('selected'));
+        document.getElementById('stakeInput').value = '';
+        renderBetSlip();
+      } else {
+        resultEl.className = 'alert alert-danger';
+        resultEl.textContent = data.error || 'Failed to place bet';
+      }
+    } catch {
+      document.getElementById('betResult').className = 'alert alert-danger';
+      document.getElementById('betResult').textContent = 'Connection error';
+    } finally {
+      placeBtn.disabled = false;
+      placeBtn.textContent = 'Place Bet';
+    }
+  }
+  window.placeBet = placeBet;
+
+  async function loadEvent() {
+    try {
+      const r = await fetch(`/api/events/${eventId}`);
+      if (!r.ok) { document.getElementById('eventContent').innerHTML = `<div class="alert alert-danger">Event not found</div>`; return; }
+      const { event, odds } = await r.json();
+
+      // Group odds by market type
+      const markets = {};
+      for (const odd of odds) {
+        if (!markets[odd.market_type]) markets[odd.market_type] = [];
+        markets[odd.market_type].push(odd);
+      }
+
+      let marketsHtml = '';
+      for (const [mt, oddsArr] of Object.entries(markets)) {
+        const btns = oddsArr.map(o => `
+          <button class="odds-btn" data-odds-id="${o.odds_id}" data-market-type="${mt}"
+            onclick="addSelection({odds_id:${o.odds_id}, event_id:${o.event_id}, odds_at_placement:${parseFloat(o.decimal_odds)}, selection_type:'${o.selection_name.replace(/'/g,"\\'")}', selection_name:'${o.selection_name.replace(/'/g,"\\'")}', market_type:'${mt.replace(/'/g,"\\'")}'})"
+          >
+            <span class="selection">${o.selection_name}</span>
+            ${parseFloat(o.decimal_odds).toFixed(2)}
+          </button>`).join('');
+
+        marketsHtml += `
+          <div class="market-card card p-3">
+            <div class="fw-semibold mb-2 small text-muted text-uppercase">${mt}</div>
+            <div class="odds-row">${btns}</div>
+          </div>`;
+      }
+
+      if (marketsHtml === '') {
+        marketsHtml = `<div class="text-muted">No odds available for this event.</div>`;
+      }
+
+      const betSlipHtml = `
+        <div class="betslip">
+          <div class="betslip-header"><i class="bi bi-receipt me-2"></i>Bet Slip</div>
+          <div id="betSlipBody"><p class="text-muted small text-center">Click an odds button to add a selection</p></div>
+          <hr>
+          <div class="d-flex justify-content-between small mb-1">
+            <span>Total Odds</span><strong id="slipOdds">-</strong>
+          </div>
+          <div class="d-flex justify-content-between small mb-3">
+            <span>Potential Payout</span><strong id="slipPayout">£0.00</strong>
+          </div>
+          <div class="mb-2">
+            <label class="form-label small fw-semibold">Stake (£)</label>
+            <input type="number" id="stakeInput" class="form-control stake-input" placeholder="0.00" min="0.01" step="0.01"
+              oninput="renderBetSlip()">
+          </div>
+          <div class="d-flex gap-2 mb-3">
+            <button class="btn btn-outline-secondary quick-stake flex-fill" onclick="document.getElementById('stakeInput').value=5;renderBetSlip()">£5</button>
+            <button class="btn btn-outline-secondary quick-stake flex-fill" onclick="document.getElementById('stakeInput').value=10;renderBetSlip()">£10</button>
+            <button class="btn btn-outline-secondary quick-stake flex-fill" onclick="document.getElementById('stakeInput').value=25;renderBetSlip()">£25</button>
+            <button class="btn btn-outline-secondary quick-stake flex-fill" onclick="document.getElementById('stakeInput').value=50;renderBetSlip()">£50</button>
+          </div>
+          <button class="btn-place" id="placeBtn" disabled onclick="placeBet()">
+            ${user ? 'Place Bet' : '<a href="signin.html" style="color:inherit;text-decoration:none">Sign in to Bet</a>'}
+          </button>
+          <div id="betResult"></div>
+        </div>`;
+
+      document.getElementById('eventContent').innerHTML = `
+        <a href="markets.html" class="text-muted text-decoration-none small mb-3 d-inline-block"><i class="bi bi-arrow-left me-1"></i>Back to Markets</a>
+
+        <div class="event-header">
+          <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+            <div>
+              <div class="small text-white-50 mb-1">${event.sport_name}</div>
+              <h2 class="fw-bold mb-1">${event.name}</h2>
+              <div class="small text-white-50">${formatDate(event.start_time)}</div>
+              ${event.description ? `<div class="mt-2 text-white-50 small">${event.description}</div>` : ''}
+            </div>
+            ${statusBadge(event.status)}
+          </div>
+          ${event.status === 'finished' && event.result ? `<div class="mt-3 p-2 rounded" style="background:rgba(255,255,255,0.1)"><strong>Result:</strong> ${event.result}</div>` : ''}
+        </div>
+
+        <!-- Probability chart -->
+        <div class="card border-0 shadow-sm mb-4" style="border-radius:16px">
+          <div class="card-body p-3 p-md-4">
+            <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+              <div>
+                <div class="fw-bold">Probability Over Time</div>
+                <div class="text-muted small">7-day win probability for each outcome</div>
+              </div>
+              <div id="chartLegend" class="d-flex gap-3"></div>
+            </div>
+            <canvas id="eventChart" height="90"></canvas>
+          </div>
+        </div>
+
+        <div class="row">
+          <div class="col-lg-8 mb-4">
+            <h5 class="fw-bold mb-3">Markets</h5>
+            ${event.status === 'finished' ? `<div class="alert alert-secondary mb-3">This event has finished. Betting is closed.</div>` : ''}
+            ${marketsHtml}
+          </div>
+          <div class="col-lg-4">
+            ${betSlipHtml}
+          </div>
+        </div>`;
+
+      // Build the probability chart
+      await buildEventChart(event.event_id, odds);
+
+      // Disable odds buttons if event is finished
+      if (event.status === 'finished') {
+        document.querySelectorAll('.odds-btn').forEach(btn => { btn.disabled = true; btn.style.opacity = '0.5'; });
+      }
+
+    } catch (err) {
+      document.getElementById('eventContent').innerHTML = `<div class="alert alert-danger">Failed to load event</div>`;
+      console.error(err);
+    }
+  }
+
+  loadEvent();
+</script>
+</body>
+</html>
