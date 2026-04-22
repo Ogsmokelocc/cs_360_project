@@ -355,6 +355,7 @@
     if (stored) {
         const user = JSON.parse(stored);
         document.getElementById('nav-auth').innerHTML = `
+        
             <a href="my-bets.html" class="btn btn-outline-dark btn-sm">My Bets</a>
             <a href="profile.html" class="btn btn-outline-dark btn-sm">${user.username}</a>
             <button class="btn btn-outline-dark btn-sm" onclick="logout()">Log out</button>

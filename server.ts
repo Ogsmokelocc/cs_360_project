@@ -340,33 +340,41 @@ app.get('/account/:userId', async (req: Request, res: Response) => {
     res.status(500).json({error: 'Failed to fetch account'});
   }
 });
+// Deposit funds
+app.post('/account/deposit', async (req: Request, res: Response) => {
+  const { user_id, amount } = req.body as { user_id: number; amount: number };
 
-
-//deposit funds
-app.post('/account/:userId', async (req: Request, res: Response) => {
-  const userIdParam = req.params['userId'] as string;
-  if(!userIdParam){
-    res.status(400).json({error: 'userId is required'});
+  if (!user_id || !amount || amount <= 0) {
+    res.status(400).json({ error: 'user_id and a positive amount are required' });
     return;
   }
-  const userId = parseInt(userIdParam);
-  try{
-    const[rows] = await db.query(
-      'SELECT * FROM accounts WHERE user_id = ?',
-      [userId]
+  if (amount > 10000) {
+    res.status(400).json({ error: 'Maximum single deposit is £10,000' });
+    return;
+  }
+
+  try {
+    await db.query(
+      'UPDATE accounts SET balance = balance + ? WHERE user_id = ?',
+      [amount, user_id]
     );
-    const accounts = rows as Array<{account_id: number; balance: number; currency: string}>
-    if(accounts.length===0 || !accounts[0]) {
-      res.status(404).json({error: 'Account not found'});
-      return;
-    }
-    res.json(accounts[0]);
-  } catch (err){
-    console.error('Account fetch error:', err);
-    res.status(500).json({error: 'Failed to fetch account'});
+    await db.query(
+      `INSERT INTO transactions (account_id, user_id, type, amount, status)
+       SELECT account_id, ?, 'deposit', ?, 'completed'
+       FROM accounts WHERE user_id = ?`,
+      [user_id, amount, user_id]
+    );
+    const [rows] = await db.query(
+      'SELECT balance FROM accounts WHERE user_id = ?',
+      [user_id]
+    );
+    const accounts = rows as Array<{ balance: number }>;
+    res.json({ success: true, new_balance: accounts[0]?.balance ?? 0 });
+  } catch (err) {
+    console.error('Deposit error:', err);
+    res.status(500).json({ error: 'Deposit failed' });
   }
 });
-
 
 //withdraw funds
 app.post('/account/withdraw', async (req: Request, res: Response) => {
@@ -415,6 +423,33 @@ app.post('/account/withdraw', async (req: Request, res: Response) => {
     res.status(500).json({error: 'Withdrawel failed' });
   }
 });
+
+//deposit funds
+app.post('/account/:userId', async (req: Request, res: Response) => {
+  const userIdParam = req.params['userId'] as string;
+  if(!userIdParam){
+    res.status(400).json({error: 'userId is required'});
+    return;
+  }
+  const userId = parseInt(userIdParam);
+  try{
+    const[rows] = await db.query(
+      'SELECT * FROM accounts WHERE user_id = ?',
+      [userId]
+    );
+    const accounts = rows as Array<{account_id: number; balance: number; currency: string}>
+    if(accounts.length===0 || !accounts[0]) {
+      res.status(404).json({error: 'Account not found'});
+      return;
+    }
+    res.json(accounts[0]);
+  } catch (err){
+    console.error('Account fetch error:', err);
+    res.status(500).json({error: 'Failed to fetch account'});
+  }
+});
+
+
 
 //Getting transaction history from users
 app.get('/account/:userId/transaction', async (req: Request, res: Response) => {
