@@ -128,6 +128,40 @@ CREATE TABLE bet_selections (
         ON DELETE RESTRICT
 );
 
+
+
+
+-- PREDICTIONS
+CREATE TABLE predictions (
+    prediction_id INT AUTO_INCREMENT PRIMARY KEY,
+    creator_id    INT            NOT NULL,
+    question      VARCHAR(255)   NOT NULL,
+    description   TEXT           NULL,
+    end_date      DATETIME       NOT NULL,
+    status        ENUM('open', 'closed', 'resolved') NOT NULL DEFAULT 'open',
+    outcome       ENUM('yes', 'no') NULL,
+    created_at    TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_prediction_creator
+        FOREIGN KEY (creator_id) REFERENCES users (user_id)
+        ON DELETE CASCADE
+);
+
+
+-- PREDICTION_BETS
+CREATE TABLE prediction_bets (
+    bet_id        INT AUTO_INCREMENT PRIMARY KEY,
+    prediction_id INT              NOT NULL,
+    user_id       INT              NOT NULL,
+    side          ENUM('yes','no') NOT NULL,
+    amount        DECIMAL(15,2)    NOT NULL,
+    status        ENUM('pending','won','lost','refunded') NOT NULL DEFAULT 'pending',
+    placed_at     TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_pb_prediction
+        FOREIGN KEY (prediction_id) REFERENCES predictions (prediction_id) ON DELETE CASCADE,
+    CONSTRAINT fk_pb_user
+        FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================

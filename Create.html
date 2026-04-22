@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Create Market - Bull Market</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f8f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #000;
+        }
+
+        .top-nav {
+            background-color: #fff;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.08);
+        }
+
+        .top-nav .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+        }
+
+        .form-container {
+            max-width: 640px;
+            margin: 3rem auto;
+            background: #fff;
+            border-radius: 20px;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+            padding: 2.5rem;
+        }
+
+        .form-container h1 {
+            font-size: 1.8rem;
+            font-weight: 800;
+            margin-bottom: 0.25rem;
+        }
+
+        .form-label {
+            letter-spacing: 2px;
+            font-size: 11px;
+            color: #777;
+            font-weight: 600;
+            margin-bottom: 8px;
+            text-transform: uppercase;
+        }
+
+        .form-control {
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 14px 16px;
+            font-size: 1rem;
+            transition: border-color 0.2s;
+        }
+
+        .form-control:focus {
+            border-color: #000;
+            box-shadow: none;
+        }
+
+        textarea.form-control {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .btn-submit {
+            margin-top: 1.5rem;
+            padding: 14px;
+            border-radius: 12px;
+            background: #000;
+            color: #fff;
+            border: none;
+            width: 100%;
+            font-size: 1rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-submit:hover { background: #D72323; }
+
+        .error-msg  { color: #D72323; text-align: center; margin-top: 10px; font-size: 0.9rem; }
+        .success-msg { color: green; text-align: center; margin-top: 10px; font-size: 0.9rem; }
+
+        .tip-box {
+            background: #f9f9f9;
+            border-left: 3px solid #D72323;
+            border-radius: 8px;
+            padding: 0.85rem 1rem;
+            font-size: 0.85rem;
+            color: #555;
+            margin-bottom: 1.5rem;
+        }
+
+        .not-logged-in {
+            text-align: center;
+            padding: 3rem;
+            color: #999;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg top-nav">
+    <div class="container-fluid">
+        <a class="navbar-brand d-flex align-items-center" href="index.html">
+            <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="60" height="60" class="me-2">
+            <span>BULL MARKET</span>
+        </a>
+        <div class="d-flex ms-auto gap-2" id="nav-auth">
+            <a href="signin.html" class="btn btn-outline-dark">Sign in</a>
+            <a href="register.html" class="btn btn-dark">Register</a>
+        </div>
+    </div>
+</nav>
+
+<!-- Form -->
+<div class="form-container" id="form-container">
+    <h1> Create a Market</h1>
+    <p class="text-muted mb-4">Ask a yes/no question and let people bet on the outcome.</p>
+
+    <div class="tip-box">
+        <strong>Tips for a good question:</strong><br>
+        Make it clear, specific, and resolvable — e.g. <em>"Will my professor give our group an A on the project?"</em> not just <em>"Will we do well?"</em>
+    </div>
+
+    <div class="mb-4">
+        <label class="form-label">Question</label>
+        <input
+            type="text"
+            id="question"
+            class="form-control"
+            placeholder="Will my professor give us an A on this project?"
+            maxlength="255"
+        />
+        <div style="text-align:right;font-size:0.75rem;color:#bbb;margin-top:4px;">
+            <span id="char-count">0</span>/255
+        </div>
+    </div>
+
+    <div class="mb-4">
+        <label class="form-label">Description <span style="color:#bbb;font-weight:400;">(optional)</span></label>
+        <textarea
+            id="description"
+            class="form-control"
+            placeholder="Add any context that helps people understand how this will be resolved..."
+        ></textarea>
+    </div>
+
+    <div class="mb-4">
+        <label class="form-label">Closing Date</label>
+        <input type="datetime-local" id="end_date" class="form-control" />
+        <div style="font-size:0.78rem;color:#aaa;margin-top:6px;">
+            Betting stops at this time. You resolve the outcome after.
+        </div>
+    </div>
+
+    <button class="btn-submit" onclick="createMarket()">CREATE MARKET →</button>
+    <p class="error-msg"   id="error-msg"></p>
+    <p class="success-msg" id="success-msg"></p>
+</div>
+
+<script>
+    // Auth check — must be logged in to create
+    let currentUser = null;
+    const stored = localStorage.getItem('user');
+
+    if (stored) {
+        currentUser = JSON.parse(stored);
+        const nav = document.getElementById('nav-auth');
+        nav.innerHTML = `
+            <span class="navbar-text mx-2">${currentUser.username}</span>
+            <a href="markets.html" class="btn btn-outline-dark">Browse</a>
+            <a href="my-bets.html" class="btn btn-outline-dark">My Bets</a>
+            <a href="profile.html" class="btn btn-outline-dark btn-sm">Profile</a>
+
+            <button class="btn btn-dark btn-sm" onclick="logout()">Log out</button>
+        `;
+    } else {
+        // Not logged in — show message instead of form
+        document.getElementById('form-container').innerHTML = `
+            <div class="not-logged-in">
+                <h2>Sign in to create a market</h2>
+                <p class="mt-2">You need an account to create prediction markets.</p>
+                <a href="signin.html" class="btn btn-dark mt-3 px-4">Sign In</a>
+                <a href="register.html" class="btn btn-outline-dark mt-3 px-4 ms-2">Register</a>
+            </div>
+        `;
+    }
+
+    function logout() {
+        localStorage.removeItem('user');
+        window.location.href = 'index.html';
+    }
+
+    // Character counter for question
+    const questionInput = document.getElementById('question');
+    if (questionInput) {
+        questionInput.addEventListener('input', () => {
+            document.getElementById('char-count').textContent = questionInput.value.length;
+        });
+
+        // Set minimum date to now
+        const endDateInput = document.getElementById('end_date');
+        if (endDateInput) {
+            const now = new Date();
+            now.setMinutes(now.getMinutes() - now.getTimezoneOffset());
+            endDateInput.min = now.toISOString().slice(0, 16);
+        }
+    }
+
+    async function createMarket() {
+        if (!currentUser) {
+            window.location.href = 'signin.html';
+            return;
+        }
+
+        const question    = document.getElementById('question').value.trim();
+        const description = document.getElementById('description').value.trim();
+        const end_date    = document.getElementById('end_date').value;
+        const errorMsg    = document.getElementById('error-msg');
+        const successMsg  = document.getElementById('success-msg');
+
+        errorMsg.textContent   = '';
+        successMsg.textContent = '';
+
+        if (!question) {
+            errorMsg.textContent = 'Please enter a question.';
+            return;
+        }
+        if (!end_date) {
+            errorMsg.textContent = 'Please pick a closing date.';
+            return;
+        }
+        if (new Date(end_date) <= new Date()) {
+            errorMsg.textContent = 'Closing date must be in the future.';
+            return;
+        }
+
+        try {
+            const res = await fetch('http://localhost:3000/predictions', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    user_id: currentUser.id,
+                    question,
+                    description: description || null,
+                    end_date
+                })
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                successMsg.textContent = '✓ Market created! Redirecting...';
+                setTimeout(() => window.location.href = 'markets.html', 1200);
+            } else {
+                errorMsg.textContent = data.error ?? 'Failed to create market.';
+            }
+        } catch {
+            errorMsg.textContent = 'Could not connect to server.';
+        }
+    }
+</script>
+
+</body>
+</html>

@@ -1,257 +1,571 @@
-
-<!-- in terminal navigate to this directory and type/enter (npm run dev) to start the backend-->
+<!-- in terminal navigate to this directory and type/enter (npm run dev) to start the backend -->
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Prediction Market</title>
-    <!-- Bootstrap CSS -->
+    <title>Bull Market</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
-    <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        /* general styling for the entire page */
+        * { box-sizing: border-box; }
+
         body {
-            background-color: #ffffff;
+            background-color: #f8f8f8;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            color: #000000;
+            color: #000;
             margin: 0;
             padding: 0;
         }
 
-        /* styling for nav bar */
-    .top-nav {
-      background-color: #ffffff; /* Slightly transparent white */
-      backdrop-filter: blur(10px);
-      color: #000;
-      box-shadow: 0 2px 5px rgba(255, 255, 255, 0.1);
-    }
+        /* ── Navbar ── */
+        .top-nav {
+            background-color: #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
 
-     /* branding for the nav bar */
-    .top-nav .navbar-brand {
-      font-weight: bold;
-      font-size: 1.5rem;
-      color: #000000;
-    }
+        .top-nav .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #000;
+        }
 
-    /* styling for the hero section */
-    .middle-section {
-      position: relative;
-      min-height: calc(100vh - 56px); /* takes full view port minus navbar */
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      text-align: center;
-      padding: 2rem;
-      box-sizing: border-box;
-      overflow: hidden;
-    }
+        /* ── Hero ── */
+        .hero {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            text-align: center;
+            padding: 3.5rem 1rem 2.5rem;
+        }
 
-    .middle-section::before {
-      content: "";
-      position: absolute;
-      top: 0; 
-      left: 0; 
-      width: 100%; 
-      height: 100%;
-    
-      background-size: cover;
-      background-position: center;
-      z-index: -1;
-    }
+        .hero h1 {
+            font-size: 2.8rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+        }
 
-    /* removes bootstrap's side padding when using container-fluid so centering is exact */
-    .middle-section.container-fluid {
-      padding-left: 0;
-      padding-right: 0;
-      width: 100%;
-    }
+        .hero h1 span { color: #D72323; }
 
-    .social-icons {
-      display: flex;
-      gap: 1rem;
-      justify-content: center;
-      margin-top: 3rem;
-    }
+        .hero p {
+            font-size: 1.1rem;
+            color: #666;
+            max-width: 480px;
+            margin: 0.75rem auto 1.5rem;
+        }
 
-    .social-icons a {
-      color: #800000;
-      font-size: 1.5rem;
-      transition: color 0.3s;
-    }
+        /* ── Stats bar ── */
+        .stats-bar {
+            display: flex;
+            justify-content: center;
+            gap: 3rem;
+            padding: 1rem 0;
+            background: #fff;
+            border-bottom: 1px solid #f0f0f0;
+        }
 
-    .social-icons a:hover {
-      color: #00bfff;
-    }
- 
+        .stat { text-align: center; }
+        .stat-num { font-size: 1.6rem; font-weight: 800; color: #D72323; }
+        .stat-label { font-size: 0.75rem; color: #999; text-transform: uppercase; letter-spacing: 1px; }
 
+        /* ── Featured chart card ── */
+        .featured-section {
+            max-width: 900px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        .section-label {
+            font-size: 0.75rem;
+            font-weight: 700;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #999;
+            margin-bottom: 0.75rem;
+        }
+
+        .featured-card {
+            background: #fff;
+            border-radius: 18px;
+            border: 1px solid #eee;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.07);
+            padding: 1.75rem;
+        }
+
+        .featured-question {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: #111;
+            margin-bottom: 0.3rem;
+        }
+
+        .featured-meta {
+            font-size: 0.8rem;
+            color: #aaa;
+            margin-bottom: 1rem;
+        }
+
+        .prob-display {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .prob-yes-num {
+            font-size: 2.8rem;
+            font-weight: 900;
+            color: #D72323;
+            line-height: 1;
+        }
+
+        .prob-no-num {
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: #bbb;
+        }
+
+        .prob-bar-wrap {
+            background: #f0f0f0;
+            border-radius: 99px;
+            height: 8px;
+            margin-bottom: 1.25rem;
+            overflow: hidden;
+        }
+
+        .prob-bar-fill {
+            height: 100%;
+            background: #D72323;
+            border-radius: 99px;
+            transition: width 0.6s ease;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            height: 220px;
+        }
+
+        .chart-loading {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #ccc;
+            font-size: 0.85rem;
+        }
+
+        /* dots */
+        .dot-nav {
+            display: flex;
+            gap: 6px;
+            justify-content: center;
+            margin-top: 1.25rem;
+        }
+
+        .dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #ddd;
+            border: none;
+            cursor: pointer;
+            padding: 0;
+            transition: background 0.25s;
+        }
+
+        .dot.active { background: #D72323; }
+
+        /* ── Market cards grid ── */
+        .markets-section {
+            max-width: 900px;
+            margin: 0 auto 3rem;
+            padding: 0 1.5rem;
+        }
+
+        .markets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+            gap: 1rem;
+        }
+
+        .market-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #eee;
+            padding: 1.1rem 1.25rem;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+            cursor: pointer;
+            transition: box-shadow 0.2s, transform 0.15s;
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .market-card:hover {
+            box-shadow: 0 6px 20px rgba(0,0,0,0.11);
+            transform: translateY(-2px);
+        }
+
+        .card-q {
+            font-weight: 700;
+            font-size: 0.92rem;
+            color: #111;
+            margin-bottom: 0.5rem;
+            line-height: 1.4;
+        }
+
+        .card-bar-wrap {
+            background: #f0f0f0;
+            border-radius: 99px;
+            height: 6px;
+            margin-bottom: 0.5rem;
+            overflow: hidden;
+        }
+
+        .card-bar-fill {
+            height: 100%;
+            background: #D72323;
+            border-radius: 99px;
+        }
+
+        .card-foot {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .card-yes { color: #D72323; font-weight: 700; }
+
+        .empty-state {
+            text-align: center;
+            padding: 3rem;
+            color: #bbb;
+        }
+
+        /* ── Social ── */
+        .social-icons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            padding: 2rem 0;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .social-icons a {
+            color: #800000;
+            font-size: 1.4rem;
+            transition: color 0.2s;
+        }
+
+        .social-icons a:hover { color: #00bfff; }
     </style>
-
 </head>
-
 <body>
-    <!-- top of page nav bar-->
-    <nav class="navbar navbar-expand-lg top-nav">
-        <div class="container-fluid">
-            <a class="navbar-brand d-flex align-items-center" href="index.html">
-                <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="100"
-                    height="100" class="me-2">
-                <span>BULL MARKET</span>
-            </a>
-            <div class="d-flex ms-auto" id="nav-auth">
-                <a href="signin.html" class="btn btn-outline-dark me-2">Sign in</a>
-                <a href="register.html" class="btn btn-dark">Register</a>
-            </div>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg top-nav">
+    <div class="container-fluid px-3">
+        <a class="navbar-brand d-flex align-items-center" href="index.html">
+            <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="52" height="52" class="me-2">
+            BULL MARKET
+        </a>
+        <div class="d-flex ms-auto gap-2 align-items-center" id="nav-auth">
+            <a href="markets.html" class="btn btn-outline-dark btn-sm">Browse</a>
+            <a href="signin.html" class="btn btn-outline-dark btn-sm">Sign in</a>
+            <a href="register.html" class="btn btn-dark btn-sm">Register</a>
         </div>
-    </nav>
+    </div>
+</nav>
 
+<!-- Hero -->
+<div class="hero">
+    <h1>Predict. Bet. <span>Win.</span></h1>
+    <p>Create your own prediction markets and bet on questions from your community.</p>
+    <div class="d-flex gap-2 justify-content-center">
+        <a href="Markets.html" class="btn btn-dark px-4">Browse Markets</a>
+        <a href="create.html" class="btn btn-outline-dark px-4">+ Create a Market</a>
+    </div>
+</div>
 
-    <!--middle section-->
-    <section class="middle-section container-fluid">
-        <div>
-            <canvas id="marketChart" width="800" height="400"></canvas>
+<!-- Stats -->
+<div class="stats-bar" id="stats-bar">
+    <div class="stat"><div class="stat-num" id="stat-markets">—</div><div class="stat-label">Open Markets</div></div>
+    <div class="stat"><div class="stat-num" id="stat-bets">—</div><div class="stat-label">Total Bets</div></div>
+    <div class="stat"><div class="stat-num" id="stat-pool">—</div><div class="stat-label">Total Pool</div></div>
+</div>
+
+<!-- Featured rotating chart -->
+<div class="featured-section">
+    <div class="section-label">Featured Markets</div>
+    <div class="featured-card">
+        <div class="featured-question" id="feat-question">Loading...</div>
+        <div class="featured-meta" id="feat-meta"></div>
+
+        <div class="prob-display">
+            <div class="prob-yes-num" id="feat-yes">—</div>
+            <div class="prob-no-num"  id="feat-no"></div>
         </div>
-        <!-- Social Media Icons -->
-        <div class="social-icons">
-            <a href="#" aria-label="Email"><i class="bi bi-envelope-fill"></i></a>
-            <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
-            <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
-            <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+
+        <div class="prob-bar-wrap">
+            <div class="prob-bar-fill" id="feat-bar" style="width:50%"></div>
         </div>
-    </section>
 
+        <div class="canvas-wrap">
+            <div class="chart-loading" id="feat-loading">Loading chart...</div>
+            <canvas id="featChart"></canvas>
+        </div>
 
+        <div class="dot-nav" id="dot-nav"></div>
+    </div>
+</div>
 
+<!-- All markets grid -->
+<div class="markets-section">
+    <div class="section-label">All Open Markets</div>
+    <div class="markets-grid" id="markets-grid">
+        <div class="empty-state">Loading markets...</div>
+    </div>
+</div>
 
+<!-- Social -->
+<div class="social-icons">
+    <a href="#" aria-label="Email"><i class="bi bi-envelope-fill"></i></a>
+    <a href="#" aria-label="Instagram"><i class="bi bi-instagram"></i></a>
+    <a href="#" aria-label="GitHub"><i class="bi bi-github"></i></a>
+    <a href="#" aria-label="Twitter"><i class="bi bi-twitter"></i></a>
+</div>
 
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
-<!--will probaly delete this stuff below which is market data imported from polymarket, once we figure out how to integrate our own data or have a better and clearer scope of our project-->
-    <script>
-        let chart;
-        let markets = [];
-        let index = 0;
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // ── Auth state ────────────────────────────────────────────────
+    /* 
+    --DELETED class below and replaced with <a href="profile.html" class="btn btn-dark btn-dark btn-sm">${user.username}</a>
+    <span class="navbar-text mx-1" style="font-size:0.85rem;">👤 ${user.username}</span> 
+    --DELETED  <a href="create.html"  class="btn btn-outline-dark btn-sm">+ Create</a>
+    was redunted there already was a create button in the main part of the page
+    --DELETED    <a href="Markets.html" class="btn btn-outline-dark btn-sm">Browse</a>
 
-        async function loadMarkets() {
-            try {
-                const res = await fetch("http://localhost:3000/markets");
-                const data = await res.json();
+    */
 
-                console.log("DATA:", data);
-
-                if (!data || data.length === 0) {
-                    console.error("No markets returned");
-                    return;
-                }
-
-                markets = data;
-
-                initChart();
-                setInterval(switchMarket, 4000);
-            } catch (err) {
-                console.error("FETCH ERROR:", err);
-            }
-        }
-
-
-
-        function initChart() {
-            const ctx = document.getElementById("marketChart").getContext("2d");
-
-            const firstMarket = markets[0];
-            const price = firstMarket.outcomePrices
-                ? parseFloat(firstMarket.outcomePrices[0]) * 100
-                : 50;
-
-            chart = new Chart(ctx, {
-                type: 'line',
-                data: {
-                    labels: ["Now"], // will update later
-                    datasets: [{
-                        label: firstMarket.question || "Market",
-                        data: [price],
-                        borderColor: 'rgba(255, 99, 132, 1)',
-                        backgroundColor: 'rgba(255, 99, 132, 0.2)',
-                        fill: true,
-                        tension: 0.4, // smooth curves
-                        pointRadius: 6,
-                        pointHoverRadius: 8,
-                    }]
-                },
-                options: {
-                    responsive: true,
-                    plugins: {
-                        legend: {
-                            display: true,
-                            labels: {
-                                font: {
-                                    size: 16
-                                }
-                            }
-                        },
-                        tooltip: {
-                            enabled: true,
-                            mode: 'index',
-                            intersect: false,
-                        }
-                    },
-                    scales: {
-                        x: {
-                            title: {
-                                display: true,
-                                text: 'Time',
-                                font: { size: 14, weight: 'bold' }
-                            }
-                        },
-                        y: {
-                            title: {
-                                display: true,
-                                text: 'Probability %',
-                                font: { size: 14, weight: 'bold' }
-                            },
-                            min: 0,
-                            max: 100
-                        }
-                    }
-                }
-            });
-        }
-        function switchMarket() {
-            index = (index + 1) % markets.length;
-
-            const market = markets[index];
-
-            chart.data.datasets[0].label = market.question;
-            chart.data.datasets[0].data = [market.outcomes[0].price * 100];
-
-            chart.update();
-        }
-
-        loadMarkets();
-    </script>
-    <script>
-    // see if logged in
     const stored = localStorage.getItem('user');
-
     if (stored) {
         const user = JSON.parse(stored);
-        const navAuth = document.getElementById('nav-auth');
-
-        //replace the buttons
-        navAuth.innerHTML = `
-        <span class="navbar-text me-3">👤 ${user.username}</span>
-        <button class="btn btn-outline-dark" onclick="logout()">Log out</button>
+        document.getElementById('nav-auth').innerHTML = `
+            <a href="my-bets.html" class="btn btn-outline-dark btn-sm">My Bets</a>
+            <a href="profile.html" class="btn btn-outline-dark btn-sm">${user.username}</a>
+            <button class="btn btn-outline-dark btn-sm" onclick="logout()">Log out</button>
+            
         `;
     }
 
     function logout() {
-        // clear stored info
         localStorage.removeItem('user');
         window.location.reload();
     }
-    </script>
+
+    // ── Helpers ───────────────────────────────────────────────────
+    function calcYesProb(yesPool, totalPool) {
+        if (!totalPool || totalPool <= 0) return 50;
+        return Math.round((yesPool / totalPool) * 100);
+    }
+
+    function formatDate(d) {
+        return new Date(d).toLocaleDateString('en-GB', {
+            day: 'numeric', month: 'short', year: 'numeric'
+        });
+    }
+
+    function formatPool(n) {
+        const num = parseFloat(n) || 0;
+        return num >= 1000
+            ? '£' + (num / 1000).toFixed(1) + 'k'
+            : '£' + num.toFixed(2);
+    }
+
+    // ── Chart ─────────────────────────────────────────────────────
+    let featChart = null;
+
+    function renderFeatChart(market) {
+        const yesPool   = parseFloat(market.yes_pool)   || 0;
+        const noPool    = parseFloat(market.no_pool)    || 0;
+        const totalPool = parseFloat(market.total_pool) || 0;
+        const yesProb   = calcYesProb(yesPool, totalPool);
+        const noProb    = 100 - yesProb;
+
+        document.getElementById('feat-question').textContent = market.question;
+        document.getElementById('feat-meta').textContent =
+            `By ${market.creator_name} · Closes ${formatDate(market.end_date)} · ${market.total_bets || 0} bets`;
+        document.getElementById('feat-yes').textContent = `${yesProb}% YES`;
+        document.getElementById('feat-no').textContent  = `${noProb}% NO`;
+        document.getElementById('feat-bar').style.width = `${yesProb}%`;
+        document.getElementById('feat-loading').style.display = 'none';
+
+        const ctx = document.getElementById('featChart').getContext('2d');
+
+        if (featChart) {
+            // Update existing chart
+            featChart.data.labels = ['YES', 'NO'];
+            featChart.data.datasets[0].data = [yesProb, noProb];
+            featChart.data.datasets[0].label = market.question;
+            featChart.update('active');
+        } else {
+            // Create chart for the first time
+            featChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['YES', 'NO'],
+                    datasets: [{
+                        label: market.question,
+                        data: [yesProb, noProb],
+                        backgroundColor: ['rgba(215,35,35,0.75)', 'rgba(180,180,180,0.45)'],
+                        borderColor:     ['rgba(215,35,35,1)',    'rgba(140,140,140,1)'],
+                        borderWidth: 2,
+                        borderRadius: 10,
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: { duration: 500 },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: { label: c => `${c.parsed.y}%` }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            min: 0, max: 100,
+                            ticks: { callback: v => v + '%', font: { size: 11 } },
+                            grid: { color: '#f5f5f5' }
+                        },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+    }
+
+    // ── Featured rotation ─────────────────────────────────────────
+    let markets = [];
+    let featIndex = 0;
+    let autoplay = null;
+    const FEATURED_COUNT = 8;
+
+    function buildDots(count) {
+        const nav = document.getElementById('dot-nav');
+        nav.innerHTML = '';
+        for (let i = 0; i < count; i++) {
+            const btn = document.createElement('button');
+            btn.className = 'dot' + (i === 0 ? ' active' : '');
+            btn.addEventListener('click', () => {
+                clearInterval(autoplay);
+                showFeatured(i);
+                startAutoplay();
+            });
+            nav.appendChild(btn);
+        }
+    }
+
+    function updateDots() {
+        document.querySelectorAll('.dot').forEach((d, i) =>
+            d.classList.toggle('active', i === featIndex)
+        );
+    }
+
+    function showFeatured(i) {
+        featIndex = i;
+        updateDots();
+        renderFeatChart(markets[i]);
+    }
+
+    function startAutoplay() {
+        clearInterval(autoplay);
+        autoplay = setInterval(() => {
+            showFeatured((featIndex + 1) % Math.min(markets.length, FEATURED_COUNT));
+        }, 7000);
+    }
+
+    // ── Small market cards ────────────────────────────────────────
+    function renderGrid(data) {
+        const grid = document.getElementById('markets-grid');
+
+        if (!data || data.length === 0) {
+            grid.innerHTML = `
+                <div class="empty-state" style="grid-column:1/-1;">
+                    <p>No open markets yet.</p>
+                    <a href="create.html" class="btn btn-dark mt-2">Create the first one!</a>
+                </div>`;
+            return;
+        }
+
+        grid.innerHTML = data.map(m => {
+            const yesPool   = parseFloat(m.yes_pool)   || 0;
+            const totalPool = parseFloat(m.total_pool) || 0;
+            const yesProb   = calcYesProb(yesPool, totalPool);
+            const noProb    = 100 - yesProb;
+
+            return `
+            <a href="markets.html" class="market-card">
+                <div class="card-q">${m.question}</div>
+                <div class="card-bar-wrap">
+                    <div class="card-bar-fill" style="width:${yesProb}%"></div>
+                </div>
+                <div class="card-foot">
+                    <span class="card-yes">${yesProb}% YES</span>
+                    <span>${m.total_bets || 0} bets · ${formatPool(totalPool)}</span>
+                </div>
+            </a>`;
+        }).join('');
+    }
+
+    // ── Update stats bar ──────────────────────────────────────────
+    function updateStats(data) {
+        const totalBets = data.reduce((s, m) => s + (parseInt(m.total_bets) || 0), 0);
+        const totalPool = data.reduce((s, m) => s + (parseFloat(m.total_pool) || 0), 0);
+        document.getElementById('stat-markets').textContent = data.length;
+        document.getElementById('stat-bets').textContent    = totalBets;
+        document.getElementById('stat-pool').textContent    = formatPool(totalPool);
+    }
+
+    // ── Load everything ───────────────────────────────────────────
+    async function loadAll() {
+        try {
+            const res  = await fetch('http://localhost:3000/predictions');
+            const data = await res.json();
+
+            markets = Array.isArray(data) ? data : [];
+
+            updateStats(markets);
+            renderGrid(markets);
+
+            const featured = markets.slice(0, FEATURED_COUNT);
+            if (featured.length > 0) {
+                buildDots(featured.length);
+                showFeatured(0);
+                if (featured.length > 1) startAutoplay();
+            } else {
+                document.getElementById('feat-question').textContent = 'No markets yet — create one!';
+                document.getElementById('feat-loading').style.display = 'none';
+                document.getElementById('feat-yes').textContent = '';
+                document.getElementById('feat-no').textContent  = '';
+            }
+
+        } catch (err) {
+            console.error('Load error:', err);
+            document.getElementById('feat-question').textContent = 'Could not connect to server.';
+            document.getElementById('feat-loading').style.display = 'none';
+            document.getElementById('markets-grid').innerHTML =
+                '<div class="empty-state">Could not connect to server.</div>';
+        }
+    }
+
+    loadAll();
+</script>
 
 </body>
+</html>

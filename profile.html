@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>My Account - Bull Market</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            background-color: #f8f8f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #000;
+            margin: 0;
+        }
+
+        /* ── Navbar ── */
+        .top-nav {
+            background: #fff;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .top-nav .navbar-brand {
+            font-weight: 800;
+            font-size: 1.4rem;
+            color: #000;
+        }
+
+        /* ── Page layout ── */
+        .page-wrap {
+            max-width: 860px;
+            margin: 2rem auto;
+            padding: 0 1.5rem;
+        }
+
+        /* ── Balance card ── */
+        .balance-card {
+            background: #000;
+            color: #fff;
+            border-radius: 20px;
+            padding: 2rem 2.5rem;
+            margin-bottom: 1.5rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 1rem;
+        }
+
+        .balance-label {
+            font-size: 0.8rem;
+            letter-spacing: 2px;
+            text-transform: uppercase;
+            color: #aaa;
+            margin-bottom: 0.25rem;
+        }
+
+        .balance-amount {
+            font-size: 3rem;
+            font-weight: 900;
+            letter-spacing: -2px;
+            color: #fff;
+            line-height: 1;
+        }
+
+        .balance-currency {
+            font-size: 1.2rem;
+            color: #aaa;
+            margin-left: 4px;
+        }
+
+        .balance-user {
+            font-size: 0.9rem;
+            color: #777;
+            margin-top: 0.4rem;
+        }
+
+        /* ── Section cards ── */
+        .section-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            margin-bottom: 1.25rem;
+            padding-bottom: 0.6rem;
+            border-bottom: 2px solid #f0f0f0;
+        }
+
+        /* ── Quick amount buttons ── */
+        .quick-amounts {
+            display: flex;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+            margin-bottom: 1rem;
+        }
+
+        .quick-btn {
+            border: 2px solid #ddd;
+            background: #fff;
+            border-radius: 10px;
+            padding: 6px 16px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .quick-btn:hover {
+            border-color: #000;
+            background: #000;
+            color: #fff;
+        }
+
+        /* ── Amount input ── */
+        .amount-row {
+            display: flex;
+            gap: 0.75rem;
+            align-items: center;
+        }
+
+        .amount-input-wrap {
+            position: relative;
+            flex: 1;
+        }
+
+        .amount-prefix {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            font-weight: 700;
+            color: #888;
+            font-size: 1rem;
+        }
+
+        .amount-input {
+            width: 100%;
+            border: 2px solid #ddd;
+            border-radius: 12px;
+            padding: 12px 14px 12px 28px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            transition: border-color 0.2s;
+        }
+
+        .amount-input:focus {
+            outline: none;
+            border-color: #000;
+        }
+
+        .btn-deposit {
+            background: #000;
+            color: #fff;
+            border: none;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: background 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-deposit:hover {
+            background: #D72323;
+        }
+
+        .btn-withdraw {
+            background: #fff;
+            color: #000;
+            border: 2px solid #000;
+            border-radius: 12px;
+            padding: 12px 24px;
+            font-weight: 700;
+            font-size: 0.95rem;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .btn-withdraw:hover {
+            background: #000;
+            color: #fff;
+        }
+
+        .action-msg {
+            margin-top: 0.75rem;
+            font-size: 0.85rem;
+            min-height: 1.2rem;
+        }
+
+        .action-msg.success {
+            color: green;
+        }
+
+        .action-msg.error {
+            color: #D72323;
+        }
+
+        /* ── Stats row ── */
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .stat-card {
+            background: #fff;
+            border-radius: 14px;
+            border: 1px solid #eee;
+            padding: 1.1rem 1.25rem;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+        }
+
+        .stat-num {
+            font-size: 1.6rem;
+            font-weight: 900;
+            color: #D72323;
+        }
+
+        .stat-label {
+            font-size: 0.72rem;
+            color: #aaa;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 2px;
+        }
+
+        /* ── Transaction list ── */
+        .tx-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #f5f5f5;
+        }
+
+        .tx-item:last-child {
+            border-bottom: none;
+        }
+
+        .tx-icon {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+            margin-right: 0.85rem;
+            flex-shrink: 0;
+        }
+
+        .tx-icon.deposit {
+            background: #d1f0d1;
+        }
+
+        .tx-icon.withdrawal {
+            background: #f8d7da;
+        }
+
+        .tx-icon.bet {
+            background: #fff3cd;
+        }
+
+        .tx-icon.win {
+            background: #cfe2ff;
+        }
+
+        .tx-icon.refund {
+            background: #e2e3e5;
+        }
+
+        .tx-left {
+            display: flex;
+            align-items: center;
+        }
+
+        .tx-type {
+            font-weight: 600;
+            font-size: 0.9rem;
+            text-transform: capitalize;
+        }
+
+        .tx-date {
+            font-size: 0.75rem;
+            color: #aaa;
+        }
+
+        .tx-amount {
+            font-weight: 800;
+            font-size: 0.95rem;
+        }
+
+        .tx-amount.positive {
+            color: green;
+        }
+
+        .tx-amount.negative {
+            color: #D72323;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 2rem;
+            color: #bbb;
+            font-size: 0.9rem;
+        }
+
+        .not-logged-in {
+            text-align: center;
+            padding: 5rem 2rem;
+        }
+
+        @media (max-width: 580px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+
+            .balance-amount {
+                font-size: 2.2rem;
+            }
+
+            .amount-row {
+                flex-wrap: wrap;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg top-nav">
+        <div class="container-fluid px-3">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="52" height="52"
+                    class="me-2">
+                BULL MARKET
+            </a>
+            <div class="d-flex ms-auto gap-2 align-items-center" id="nav-auth">
+                <a href="signin.html" class="btn btn-outline-dark btn-sm">Sign in</a>
+                <a href="register.html" class="btn btn-dark btn-sm">Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main content -->
+    <div class="page-wrap" id="page-wrap">
+        <div class="empty-state">Loading...</div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // ── Auth check ────────────────────────────────────────────────
+        const stored = localStorage.getItem('user');
+        let currentUser = null;
+
+        if (!stored) {
+            document.getElementById('page-wrap').innerHTML = `
+            <div class="not-logged-in">
+                <h2>🔒 Sign in to view your account</h2>
+                <p class="text-muted mt-2">You need to be logged in to manage your funds.</p>
+                <a href="signin.html" class="btn btn-dark mt-3 px-4">Sign In</a>
+                <a href="register.html" class="btn btn-outline-dark mt-3 px-4 ms-2">Register</a>
+            </div>`;
+        } else {
+            currentUser = JSON.parse(stored);
+            document.getElementById('nav-auth').innerHTML = `
+            <span class="navbar-text mx-1" style="font-size:0.85rem;">${currentUser.username}</span>
+
+            <a href="index.html"    class="btn btn-outline-dark btn-sm">Home</a>
+            <a href="markets.html"  class="btn btn-outline-dark btn-sm">Markets</a>
+            <a href="my-bets.html"  class="btn btn-outline-dark btn-sm">My Bets</a>
+            <button class="btn btn-dark btn-sm" onclick="logout()">Log out</button>
+        `;
+            renderPage();
+            loadData();
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.href = 'index.html';
+        }
+
+        // ── Render static page structure ──────────────────────────────
+        function renderPage() {
+            document.getElementById('page-wrap').innerHTML = `
+
+            <!-- Balance card -->
+            <div class="balance-card">
+                <div>
+                    <div class="balance-label">Available Balance</div>
+                    <div>
+                        <span class="balance-amount" id="balance-display">—</span>
+                        <span class="balance-currency">GBP</span>
+                    </div>
+                    <div class="balance-user">${currentUser.username}</div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:0.75rem;color:#666;margin-bottom:4px;">Account ID</div>
+                    <div style="font-size:1.1rem;font-weight:700;" id="account-id-display">—</div>
+                </div>
+            </div>
+
+            <!-- Stats -->
+            <div class="stats-row">
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-won">—</div>
+                    <div class="stat-label">Bets Won</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-lost">—</div>
+                    <div class="stat-label">Bets Lost</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-num" id="stat-pending">—</div>
+                    <div class="stat-label">Pending Bets</div>
+                </div>
+            </div>
+
+            <!-- Deposit -->
+            <div class="section-card">
+                <div class="section-title">💰 Add Funds</div>
+                <div class="quick-amounts">
+                    <button class="quick-btn" onclick="setAmount('deposit', 10)">£10</button>
+                    <button class="quick-btn" onclick="setAmount('deposit', 25)">£25</button>
+                    <button class="quick-btn" onclick="setAmount('deposit', 50)">£50</button>
+                    <button class="quick-btn" onclick="setAmount('deposit', 100)">£100</button>
+                    <button class="quick-btn" onclick="setAmount('deposit', 250)">£250</button>
+                    <button class="quick-btn" onclick="setAmount('deposit', 500)">£500</button>
+                </div>
+                <div class="amount-row">
+                    <div class="amount-input-wrap">
+                        <span class="amount-prefix">£</span>
+                        <input type="number" id="deposit-amount" class="amount-input"
+                               placeholder="0.00" min="1" max="10000" step="0.01" />
+                    </div>
+                    <button class="btn-deposit" onclick="deposit()">Add Funds</button>
+                </div>
+                <div class="action-msg" id="deposit-msg"></div>
+            </div>
+
+            <!-- Withdraw -->
+            <div class="section-card">
+                <div class="section-title">Withdraw Funds</div>
+                <div class="quick-amounts">
+                    <button class="quick-btn" onclick="setAmount('withdraw', 10)">£10</button>
+                    <button class="quick-btn" onclick="setAmount('withdraw', 25)">£25</button>
+                    <button class="quick-btn" onclick="setAmount('withdraw', 50)">£50</button>
+                    <button class="quick-btn" onclick="setAmount('withdraw', 100)">£100</button>
+                </div>
+                <div class="amount-row">
+                    <div class="amount-input-wrap">
+                        <span class="amount-prefix">£</span>
+                        <input type="number" id="withdraw-amount" class="amount-input"
+                               placeholder="0.00" min="1" step="0.01" />
+                    </div>
+                    <button class="btn-withdraw" onclick="withdraw()">Withdraw</button>
+                </div>
+                <div class="action-msg" id="withdraw-msg"></div>
+            </div>
+
+            <!-- Transaction history -->
+            <div class="section-card">
+                <div class="section-title">Recent Transactions</div>
+                <div id="tx-list"><div class="empty-state">Loading transactions...</div></div>
+            </div>
+        `;
+        }
+
+        // ── Quick amount setter ───────────────────────────────────────
+        function setAmount(type, value) {
+            const input = document.getElementById(`${type}-amount`);
+            if (input) input.value = value;
+        }
+
+        // ── Update balance display ────────────────────────────────────
+        function updateBalanceDisplay(balance) {
+            const el = document.getElementById('balance-display');
+            if (el) el.textContent = parseFloat(balance).toFixed(2);
+        }
+
+        // ── Deposit ───────────────────────────────────────────────────
+        async function deposit() {
+            const input = document.getElementById('deposit-amount');
+            const msgEl = document.getElementById('deposit-msg');
+            const amount = parseFloat(input.value);
+
+            msgEl.textContent = '';
+            msgEl.className = 'action-msg';
+
+            if (!amount || amount <= 0) {
+                msgEl.textContent = 'Please enter a valid amount.';
+                msgEl.className = 'action-msg error';
+                return;
+            }
+            if (amount > 10000) {
+                msgEl.textContent = 'Maximum single deposit is £10,000.';
+                msgEl.className = 'action-msg error';
+                return;
+            }
+
+            msgEl.textContent = 'Processing...';
+
+            try {
+                const res = await fetch('http://localhost:3000/account/deposit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser.id, amount })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msgEl.textContent = `✓ £${amount.toFixed(2)} added successfully!`;
+                    msgEl.className = 'action-msg success';
+                    input.value = '';
+                    updateBalanceDisplay(data.new_balance);
+                    loadTransactions(); // refresh history
+                } else {
+                    msgEl.textContent = data.error ?? 'Deposit failed.';
+                    msgEl.className = 'action-msg error';
+                }
+            } catch {
+                msgEl.textContent = 'Could not connect to server.';
+                msgEl.className = 'action-msg error';
+            }
+        }
+
+        // ── Withdraw ──────────────────────────────────────────────────
+        async function withdraw() {
+            const input = document.getElementById('withdraw-amount');
+            const msgEl = document.getElementById('withdraw-msg');
+            const amount = parseFloat(input.value);
+
+            msgEl.textContent = '';
+            msgEl.className = 'action-msg';
+
+            if (!amount || amount <= 0) {
+                msgEl.textContent = 'Please enter a valid amount.';
+                msgEl.className = 'action-msg error';
+                return;
+            }
+
+            msgEl.textContent = 'Processing...';
+
+            try {
+                const res = await fetch('http://localhost:3000/account/withdraw', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ user_id: currentUser.id, amount })
+                });
+                const data = await res.json();
+
+                if (res.ok) {
+                    msgEl.textContent = `✓ £${amount.toFixed(2)} withdrawn successfully!`;
+                    msgEl.className = 'action-msg success';
+                    input.value = '';
+                    updateBalanceDisplay(data.new_balance);
+                    loadTransactions();
+                } else {
+                    msgEl.textContent = data.error ?? 'Withdrawal failed.';
+                    msgEl.className = 'action-msg error';
+                }
+            } catch {
+                msgEl.textContent = 'Could not connect to server.';
+                msgEl.className = 'action-msg error';
+            }
+        }
+
+        // ── Transaction history ───────────────────────────────────────
+        const txIcons = {
+            deposit: { icon: '↓', cls: 'deposit' },
+            withdrawal: { icon: '↑', cls: 'withdrawal' },
+            bet: { icon: '🎯', cls: 'bet' },
+            win: { icon: '🏆', cls: 'win' },
+            refund: { icon: '↩', cls: 'refund' },
+        };
+
+        function isPositive(type) {
+            return ['deposit', 'win', 'refund'].includes(type);
+        }
+
+        async function loadTransactions() {
+            const listEl = document.getElementById('tx-list');
+            if (!listEl) return;
+
+            try {
+                const res = await fetch(`http://localhost:3000/account/${currentUser.id}/transactions`);
+                const data = await res.json();
+
+                if (!data || data.length === 0) {
+                    listEl.innerHTML = '<div class="empty-state">No transactions yet.</div>';
+                    return;
+                }
+
+                listEl.innerHTML = data.map(tx => {
+                    const meta = txIcons[tx.type] ?? { icon: '•', cls: 'deposit' };
+                    const positive = isPositive(tx.type);
+                    const sign = positive ? '+' : '-';
+                    const amtClass = positive ? 'positive' : 'negative';
+                    const date = new Date(tx.created_at).toLocaleDateString('en-GB', {
+                        day: 'numeric', month: 'short', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                    });
+
+                    return `
+                <div class="tx-item">
+                    <div class="tx-left">
+                        <div class="tx-icon ${meta.cls}">${meta.icon}</div>
+                        <div>
+                            <div class="tx-type">${tx.type}</div>
+                            <div class="tx-date">${date}</div>
+                        </div>
+                    </div>
+                    <div class="tx-amount ${amtClass}">
+                        ${sign}£${parseFloat(tx.amount).toFixed(2)}
+                    </div>
+                </div>`;
+                }).join('');
+
+            } catch {
+                listEl.innerHTML = '<div class="empty-state">Could not load transactions.</div>';
+            }
+        }
+
+        // ── Load account data and bet stats ──────────────────────────
+        async function loadData() {
+            try {
+                const [accRes, betsRes] = await Promise.all([
+                    fetch(`http://localhost:3000/account/${currentUser.id}`),
+                    fetch(`http://localhost:3000/my-bets/${currentUser.id}`)
+                ]);
+
+                const account = await accRes.json();
+                const bets = await betsRes.json();
+
+                // Balance + account ID
+                updateBalanceDisplay(account.balance ?? 0);
+                const accIdEl = document.getElementById('account-id-display');
+                if (accIdEl) accIdEl.textContent = `#${account.account_id}`;
+
+                // Bet stats
+                const won = bets.filter(b => b.status === 'won').length;
+                const lost = bets.filter(b => b.status === 'lost').length;
+                const pending = bets.filter(b => b.status === 'pending').length;
+
+                const wonEl = document.getElementById('stat-won');
+                const lostEl = document.getElementById('stat-lost');
+                const pendingEl = document.getElementById('stat-pending');
+
+                if (wonEl) wonEl.textContent = won;
+                if (lostEl) lostEl.textContent = lost;
+                if (pendingEl) pendingEl.textContent = pending;
+
+                // Load transactions
+                loadTransactions();
+
+            } catch (err) {
+                console.error('Load data error:', err);
+            }
+        }
+    </script>
+
+</body>
+
+</html>

@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Browse Markets - Bull Market</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            background-color: #f8f8f8;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            color: #000;
+        }
+
+        .top-nav {
+            background-color: #ffffff;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.08);
+        }
+
+        .top-nav .navbar-brand {
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #000;
+        }
+
+        .page-header {
+            background: #fff;
+            border-bottom: 1px solid #eee;
+            padding: 2rem 0 1.5rem;
+            text-align: center;
+        }
+
+        .page-header h1 {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .markets-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+            gap: 1.5rem;
+            padding: 2rem;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .market-card {
+            background: #fff;
+            border-radius: 16px;
+            border: 1px solid #eee;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+            transition: box-shadow 0.2s;
+        }
+
+        .market-card:hover {
+            box-shadow: 0 6px 24px rgba(0, 0, 0, 0.12);
+        }
+
+        .market-question {
+            font-size: 1rem;
+            font-weight: 700;
+            line-height: 1.4;
+            color: #111;
+        }
+
+        .market-meta {
+            font-size: 0.78rem;
+            color: #999;
+        }
+
+        .prob-bar-wrapper {
+            background: #f0f0f0;
+            border-radius: 99px;
+            height: 10px;
+            overflow: hidden;
+        }
+
+        .prob-bar-yes {
+            height: 100%;
+            background: #D72323;
+            border-radius: 99px;
+            transition: width 0.5s ease;
+        }
+
+        .prob-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .prob-yes {
+            color: #D72323;
+        }
+
+        .prob-no {
+            color: #444;
+        }
+
+        .pool-info {
+            font-size: 0.8rem;
+            color: #777;
+        }
+
+        .bet-row {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .bet-input {
+            border: 2px solid #000;
+            border-radius: 10px;
+            padding: 6px 12px;
+            font-size: 0.9rem;
+            width: 90px;
+        }
+
+        .bet-input:focus {
+            outline: none;
+            border-color: #D72323;
+        }
+
+        .btn-yes {
+            background: #D72323;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 6px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-yes:hover {
+            background: #a01a1a;
+        }
+
+        .btn-no {
+            background: #222;
+            color: #fff;
+            border: none;
+            border-radius: 10px;
+            padding: 6px 16px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        .btn-no:hover {
+            background: #444;
+        }
+
+        .bet-msg {
+            font-size: 0.78rem;
+            min-height: 1.1rem;
+        }
+
+        .bet-msg.success {
+            color: green;
+        }
+
+        .bet-msg.error {
+            color: #D72323;
+        }
+
+        .no-markets {
+            text-align: center;
+            padding: 4rem;
+            color: #999;
+            font-size: 1.1rem;
+        }
+
+        .loading-msg {
+            text-align: center;
+            padding: 4rem;
+            color: #aaa;
+        }
+
+        .creator-badge {
+            display: inline-block;
+            background: #f0f0f0;
+            border-radius: 99px;
+            padding: 2px 10px;
+            font-size: 0.75rem;
+            color: #555;
+        }
+
+        .closed-badge {
+            display: inline-block;
+            background: #fff3cd;
+            border-radius: 99px;
+            padding: 2px 10px;
+            font-size: 0.75rem;
+            color: #856404;
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg top-nav">
+        <div class="container-fluid">
+            <a class="navbar-brand d-flex align-items-center" href="index.html">
+                <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="60" height="60"
+                    class="me-2">
+                <span>BULL MARKET</span>
+            </a>
+            <div class="d-flex ms-auto gap-2" id="nav-auth">
+                <a href="signin.html" class="btn btn-outline-dark">Sign in</a>
+                <a href="register.html" class="btn btn-dark">Register</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Page header -->
+     <!--DELETED  <a href="profile.html" class="btn btn-outline-dark btn-sm">My Account</a>
+     security issue, people could click link to profile even when not logged in
+-->
+    <div class="page-header">
+        <h1>Community Markets</h1>
+        <p class="text-muted mb-3">Bet on questions created by other users</p>
+        <a href="Create.html" class="btn btn-dark px-4">+ Create a Market</a>
+    </div>
+
+    <!-- Market cards -->
+    <div id="markets-container">
+        <div class="loading-msg">Loading markets...</div>
+    </div>
+
+    <script>
+        /*
+        --DELETED  <span class="navbar-text mx-2"> ${currentUser.username}</span>
+        --ADDED    <a href="profile.html" class="btn btn-outline-dark btn-sm">${user.username}</a>
+
+    
+        */
+        let currentUser = null;
+        const stored = localStorage.getItem('user');
+        if (stored) {
+            currentUser = JSON.parse(stored);
+            const nav = document.getElementById('nav-auth');
+            nav.innerHTML = `
+            <span class="navbar-text mx-2"> ${currentUser.username}</span>
+
+            <a href="my-bets.html" class="btn btn-outline-dark btn-sm">My Bets</a>
+            <a href="profile.html" class="btn btn-outline-dark btn-sm">Profile</a>
+            <button class="btn btn-dark btn-sm" onclick="logout()">Log out</button>
+        `;
+        }
+
+        function logout() {
+            localStorage.removeItem('user');
+            window.location.reload();
+        }
+
+        // ── Calculate implied probability from pools ──────────────────
+        function calcProb(yesPool, totalPool) {
+            if (!totalPool || totalPool === 0) return 50;
+            return Math.round((yesPool / totalPool) * 100);
+        }
+
+        // ── Render all market cards ───────────────────────────────────
+        function renderMarkets(markets) {
+            const container = document.getElementById('markets-container');
+
+            if (!markets || markets.length === 0) {
+                container.innerHTML = `
+                <div class="no-markets">
+                    <p>No open markets yet.</p>
+                </div>`;
+                return;
+            }
+
+            const grid = document.createElement('div');
+            grid.className = 'markets-grid';
+
+            markets.forEach(m => {
+                const yesPool = parseFloat(m.yes_pool) || 0;
+                const noPool = parseFloat(m.no_pool) || 0;
+                const totalPool = parseFloat(m.total_pool) || 0;
+                const yesProb = calcProb(yesPool, totalPool);
+                const noProb = 100 - yesProb;
+                const endDate = new Date(m.end_date).toLocaleDateString('en-GB', {
+                    day: 'numeric', month: 'short', year: 'numeric'
+                });
+                const isClosed = m.status === 'closed';
+                const isCreator = currentUser && currentUser.id === m.creator_id;
+
+                const card = document.createElement('div');
+                card.className = 'market-card';
+                card.innerHTML = `
+                <div class="d-flex justify-content-between align-items-start gap-2">
+                    <div class="market-question">${m.question}</div>
+                    ${isClosed ? '<span class="closed-badge">Closed</span>' : ''}
+                </div>
+
+                <div class="market-meta">
+                    <span class="creator-badge"> ${m.creator_name}</span>
+                    &nbsp;·&nbsp;
+                    ${isClosed ? 'Ended' : 'Closes'}: ${endDate}
+                    &nbsp;·&nbsp;
+                    ${m.total_bets || 0} bet${m.total_bets === 1 ? '' : 's'}
+                </div>
+
+                ${m.description ? `<div style="font-size:0.85rem;color:#555;">${m.description}</div>` : ''}
+
+                <!-- Probability bar -->
+                <div>
+                    <div class="prob-labels">
+                        <span class="prob-yes">YES ${yesProb}%</span>
+                        <span class="prob-no">NO ${noProb}%</span>
+                    </div>
+                    <div class="prob-bar-wrapper mt-1">
+                        <div class="prob-bar-yes" style="width:${yesProb}%"></div>
+                    </div>
+                </div>
+
+                <div class="pool-info">
+                    Pool: £${totalPool.toFixed(2)} &nbsp;·&nbsp;
+                    YES: £${yesPool.toFixed(2)} &nbsp;·&nbsp;
+                    NO: £${noPool.toFixed(2)}
+                </div>
+
+                <!-- Bet controls (hidden if closed or not logged in) -->
+                ${!isClosed && currentUser ? `
+                <div class="bet-row">
+                    <input
+                        type="number"
+                        class="bet-input"
+                        id="amount-${m.prediction_id}"
+                        placeholder="£ amount"
+                        min="0.01"
+                        step="0.01"
+                    />
+                    <button class="btn-yes" onclick="placeBet(${m.prediction_id}, 'yes')">Bet YES</button>
+                    <button class="btn-no"  onclick="placeBet(${m.prediction_id}, 'no')">Bet NO</button>
+                </div>
+                <div class="bet-msg" id="msg-${m.prediction_id}"></div>
+                ` : !currentUser && !isClosed ? `
+                <div style="font-size:0.82rem;color:#aaa;">
+                    <a href="signin.html" style="color:#D72323;">Sign in</a> to place a bet
+                </div>
+                ` : ''}
+            `;
+
+                grid.appendChild(card);
+            });
+
+            container.innerHTML = '';
+            container.appendChild(grid);
+        }
+
+        // ── Place a bet ───────────────────────────────────────────────
+        async function placeBet(predictionId, side) {
+            if (!currentUser) {
+                window.location.href = 'signin.html';
+                return;
+            }
+
+            const input = document.getElementById(`amount-${predictionId}`);
+            const msgEl = document.getElementById(`msg-${predictionId}`);
+            const amount = parseFloat(input.value);
+
+            if (!amount || amount <= 0) {
+                msgEl.textContent = 'Enter a valid amount.';
+                msgEl.className = 'bet-msg error';
+                return;
+            }
+
+            msgEl.textContent = 'Placing bet...';
+            msgEl.className = 'bet-msg';
+
+            try {
+                const res = await fetch(`http://localhost:3000/predictions/${predictionId}/bet`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        user_id: currentUser.id,
+                        side,
+                        amount
+                    })
+                });
+
+                const data = await res.json();
+
+                if (res.ok) {
+                    msgEl.textContent = `✓ Bet placed! £${amount.toFixed(2)} on ${side.toUpperCase()}`;
+                    msgEl.className = 'bet-msg success';
+                    input.value = '';
+                    // Refresh cards to show updated pool
+                    setTimeout(loadMarkets, 1000);
+                } else {
+                    msgEl.textContent = data.error ?? 'Bet failed.';
+                    msgEl.className = 'bet-msg error';
+                }
+            } catch {
+                msgEl.textContent = 'Could not connect to server.';
+                msgEl.className = 'bet-msg error';
+            }
+        }
+
+        // ── Load markets ──────────────────────────────────────────────
+        async function loadMarkets() {
+            try {
+                const res = await fetch('http://localhost:3000/predictions');
+                const data = await res.json();
+                renderMarkets(data);
+            } catch {
+                document.getElementById('markets-container').innerHTML =
+                    '<div class="no-markets">Could not connect to server.</div>';
+            }
+        }
+
+        loadMarkets();
+    </script>
+
+</body>
+
+</html>
