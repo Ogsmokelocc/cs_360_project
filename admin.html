@@ -1,0 +1,480 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin - Bull Market</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .top-nav { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .navbar-brand { font-weight: bold; font-size: 1.4rem; color: #000; }
+    .admin-card { border-radius: 16px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 1.5rem; }
+    .admin-card .card-header { background: #000; color: #fff; border-radius: 16px 16px 0 0 !important; font-weight: 700; padding: 1rem 1.5rem; }
+    .admin-card .card-header.danger { background: #b91c1c; }
+    .form-control:focus, .form-select:focus { border-color: #000; box-shadow: none; }
+    .btn-admin { background-color: #000; color: #fff; border: none; font-weight: 600; }
+    .btn-admin:hover { background-color: #D72323; color: #fff; }
+    .btn-seed { background-color: #198754; color: #fff; border: none; font-weight: 600; }
+    .btn-seed:hover { background-color: #145a32; color: #fff; }
+    .badge-live { background-color: #D72323; }
+    .badge-upcoming { background-color: #000; }
+    .badge-finished { background-color: #6c757d; }
+    .section-note { background: #fff8e1; border-left: 4px solid #ffc107; border-radius: 0 8px 8px 0; padding: 0.6rem 1rem; font-size: 0.875rem; margin-bottom: 1rem; }
+    .danger-note { background: #fff1f1; border-left: 4px solid #D72323; border-radius: 0 8px 8px 0; padding: 0.6rem 1rem; font-size: 0.875rem; margin-bottom: 1rem; }
+    .demo-action-btn { border-radius: 10px; font-weight: 600; padding: 0.6rem 1.2rem; font-size: 0.9rem; }
+    .stat-pill { background: #f0f0f0; border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 600; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg top-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="50" height="50" class="me-2">
+      BULL MARKET
+    </a>
+    <div class="ms-auto d-flex gap-2">
+      <a href="markets.html" class="btn btn-outline-dark btn-sm">Markets</a>
+      <a href="dashboard.html" class="btn btn-dark btn-sm">Dashboard</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <h1 class="fw-bold mb-0">Admin Panel</h1>
+    <span class="badge bg-danger">Staff Only</span>
+  </div>
+
+  <!-- DB Stats bar -->
+  <div class="admin-card card mb-3">
+    <div class="card-body py-3 px-4">
+      <div class="d-flex flex-wrap gap-3 align-items-center">
+        <span class="text-muted small fw-semibold me-2">DATABASE</span>
+        <span class="stat-pill"><i class="bi bi-people me-1"></i><span id="statUsers">—</span> users</span>
+        <span class="stat-pill"><i class="bi bi-calendar-event me-1"></i><span id="statEvents">—</span> events</span>
+        <span class="stat-pill"><i class="bi bi-receipt me-1"></i><span id="statBets">—</span> bets</span>
+        <button class="btn btn-outline-secondary btn-sm ms-auto" onclick="refreshAll()"><i class="bi bi-arrow-clockwise me-1"></i>Refresh</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── DEMO MANAGEMENT ── -->
+  <div class="admin-card card">
+    <div class="card-header"><i class="bi bi-joystick me-2"></i>Demo Management</div>
+    <div class="card-body p-4">
+
+      <div class="section-note mb-4">
+        <i class="bi bi-info-circle me-1"></i>
+        Use these controls to set up, reset, or tear down the database for demonstrations.
+      </div>
+
+      <!-- Quick actions row -->
+      <div class="row g-3 mb-4">
+
+        <div class="col-md-4">
+          <div class="border rounded-3 p-3 h-100 bg-white">
+            <div class="fw-bold mb-1"><i class="bi bi-database-add text-success me-2"></i>Seed Demo Data</div>
+            <div class="text-muted small mb-3">Insert sports, events, odds, and 7-day price history. Safe to run on an empty DB.</div>
+            <button class="btn btn-seed demo-action-btn w-100" id="seedBtn" onclick="seedData()">
+              <i class="bi bi-play-circle me-2"></i>Run Seed
+            </button>
+            <div id="seedMsg" class="mt-2"></div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="border rounded-3 p-3 h-100 bg-white">
+            <div class="fw-bold mb-1"><i class="bi bi-arrow-repeat text-primary me-2"></i>Full Reset + Re-seed</div>
+            <div class="text-muted small mb-3">Wipes all events, bets, and sports, then immediately re-seeds. One-click fresh state.</div>
+            <button class="btn btn-primary demo-action-btn w-100" onclick="fullReset()">
+              <i class="bi bi-arrow-counterclockwise me-2"></i>Reset & Re-seed
+            </button>
+            <div id="resetMsg" class="mt-2"></div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="border rounded-3 p-3 h-100 bg-white">
+            <div class="fw-bold mb-1"><i class="bi bi-wallet2 text-warning me-2"></i>Set All Balances</div>
+            <div class="text-muted small mb-2">Give every registered user the same balance — useful for demo wallets.</div>
+            <div class="input-group mb-2">
+              <span class="input-group-text">$</span>
+              <input type="number" id="balanceAmount" class="form-control" value="500" min="0" step="10">
+            </div>
+            <button class="btn btn-warning demo-action-btn w-100 text-dark" onclick="resetBalances()">
+              <i class="bi bi-cash-stack me-2"></i>Set Balances
+            </button>
+            <div id="balanceMsg" class="mt-2"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Danger zone -->
+      <div class="danger-note">
+        <i class="bi bi-exclamation-triangle me-1"></i>
+        <strong>Danger zone</strong> — the actions below permanently delete data and cannot be undone.
+      </div>
+      <div class="d-flex flex-wrap gap-2">
+        <button class="btn btn-outline-danger demo-action-btn" onclick="clearBets()">
+          <i class="bi bi-trash me-2"></i>Clear All Bets
+        </button>
+        <button class="btn btn-outline-danger demo-action-btn" onclick="clearEvents()">
+          <i class="bi bi-trash me-2"></i>Clear Events &amp; Odds
+        </button>
+        <button class="btn btn-danger demo-action-btn" onclick="clearAll()">
+          <i class="bi bi-nuclear me-2"></i>Wipe Everything (keep users)
+        </button>
+      </div>
+      <div id="clearMsg" class="mt-2"></div>
+    </div>
+  </div>
+
+  <!-- ── USERS TABLE ── -->
+  <div class="admin-card card">
+    <div class="card-header"><i class="bi bi-people me-2"></i>Registered Users</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>ID</th><th>Username</th><th>Email</th><th>Balance</th><th>Bets</th><th>Joined</th></tr>
+          </thead>
+          <tbody id="usersTableBody">
+            <tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SEED CONTROLS ── -->
+  <div class="admin-card card">
+    <div class="card-header"><i class="bi bi-plus-circle me-2"></i>Create Event</div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Sport</label>
+          <select id="newEventSport" class="form-select">
+            <option value="">Loading sports...</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Event Name</label>
+          <input type="text" id="newEventName" class="form-control" placeholder="e.g. Arsenal vs Chelsea">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Start Date &amp; Time</label>
+          <input type="datetime-local" id="newEventTime" class="form-control">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Description (optional)</label>
+          <input type="text" id="newEventDesc" class="form-control" placeholder="Short description">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-admin" onclick="createEvent()"><i class="bi bi-check-circle me-2"></i>Create Event</button>
+          <div id="createEventMsg" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-card card">
+    <div class="card-header"><i class="bi bi-graph-up me-2"></i>Add Odds</div>
+    <div class="card-body p-4">
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Event</label>
+          <select id="oddsEvent" class="form-select">
+            <option value="">Select event...</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Market Type</label>
+          <input type="text" id="oddsMarket" class="form-control" placeholder="e.g. Match Winner">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Selection Name</label>
+          <input type="text" id="oddsSelection" class="form-control" placeholder="e.g. Arsenal">
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Decimal Odds</label>
+          <input type="number" id="oddsDecimal" class="form-control" placeholder="e.g. 2.50" min="1.01" step="0.01">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-admin" onclick="addOdds()"><i class="bi bi-plus me-2"></i>Add Odds</button>
+          <div id="oddsMsg" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="admin-card card">
+    <div class="card-header"><i class="bi bi-flag-fill me-2"></i>Resolve Event</div>
+    <div class="card-body p-4">
+      <div class="danger-note">
+        Resolving an event settles all pending bets. The <strong>Result</strong> must exactly match one of the selection names from the odds.
+      </div>
+      <div class="row g-3">
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Event</label>
+          <select id="resolveEvent" class="form-select">
+            <option value="">Select event...</option>
+          </select>
+        </div>
+        <div class="col-md-6">
+          <label class="form-label fw-semibold">Result (exact selection name)</label>
+          <input type="text" id="resolveResult" class="form-control" placeholder="e.g. Arsenal">
+        </div>
+        <div class="col-12">
+          <button class="btn btn-danger fw-bold" onclick="resolveEvent()"><i class="bi bi-flag me-2"></i>Resolve &amp; Settle Bets</button>
+          <div id="resolveMsg" class="mt-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── EVENTS TABLE ── -->
+  <div class="admin-card card">
+    <div class="card-header"><i class="bi bi-table me-2"></i>All Events</div>
+    <div class="card-body p-0">
+      <div class="table-responsive">
+        <table class="table table-hover mb-0">
+          <thead class="table-light">
+            <tr><th>ID</th><th>Name</th><th>Sport</th><th>Start Time</th><th>Status</th><th>Result</th></tr>
+          </thead>
+          <tbody id="eventsTableBody">
+            <tr><td colspan="6" class="text-center text-muted py-3">Loading...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  function statusBadge(s) {
+    const map = { live: 'badge-live', upcoming: 'badge-upcoming', finished: 'badge-finished' };
+    return `<span class="badge ${map[s] || 'bg-secondary'}">${s}</span>`;
+  }
+
+  function flash(id, html) { document.getElementById(id).innerHTML = html; }
+  function ok(id, msg)  { flash(id, `<div class="alert alert-success py-2 mt-2">${msg}</div>`); }
+  function err(id, msg) { flash(id, `<div class="alert alert-danger py-2 mt-2">${msg}</div>`); }
+
+  async function refreshAll() {
+    await Promise.all([loadStats(), loadUsers(), loadDropdowns()]);
+  }
+
+  // ── Stats bar ──────────────────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const [uRes, eRes] = await Promise.all([fetch('/api/admin/users'), fetch('/api/events')]);
+      const users = await uRes.json();
+      const events = await eRes.json();
+      const totalBets = users.reduce((s, u) => s + Number(u.bet_count), 0);
+      document.getElementById('statUsers').textContent = users.length;
+      document.getElementById('statEvents').textContent = events.length;
+      document.getElementById('statBets').textContent = totalBets;
+    } catch {}
+  }
+
+  // ── Users table ───────────────────────────────────────────────────────────
+  async function loadUsers() {
+    try {
+      const r = await fetch('/api/admin/users');
+      const users = await r.json();
+      const tbody = document.getElementById('usersTableBody');
+      if (users.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No users registered yet</td></tr>`;
+        return;
+      }
+      tbody.innerHTML = users.map(u => `
+        <tr>
+          <td class="text-muted">${u.user_id}</td>
+          <td><strong>${u.username}</strong></td>
+          <td class="text-muted">${u.email}</td>
+          <td class="fw-semibold">$${parseFloat(u.balance ?? 0).toFixed(2)}</td>
+          <td>${u.bet_count}</td>
+          <td class="text-muted small">${new Date(u.created_at).toLocaleDateString('en-GB')}</td>
+        </tr>`).join('');
+    } catch {}
+  }
+
+  // ── Dropdowns + events table ───────────────────────────────────────────────
+  async function loadDropdowns() {
+    try {
+      const [sRes, eRes] = await Promise.all([fetch('/api/sports'), fetch('/api/events')]);
+      const sports = await sRes.json();
+      const events = await eRes.json();
+
+      document.getElementById('newEventSport').innerHTML =
+        `<option value="">Select sport...</option>` +
+        sports.map(s => `<option value="${s.sport_id}">${s.name}</option>`).join('');
+
+      const allOpts = events.map(e => `<option value="${e.event_id}">[${e.status.toUpperCase()}] ${e.name}</option>`).join('');
+      document.getElementById('oddsEvent').innerHTML = `<option value="">Select event...</option>` + allOpts;
+
+      const pending = events.filter(e => e.status !== 'finished' && e.status !== 'cancelled');
+      document.getElementById('resolveEvent').innerHTML =
+        `<option value="">Select event...</option>` +
+        pending.map(e => `<option value="${e.event_id}">[${e.status.toUpperCase()}] ${e.name}</option>`).join('');
+
+      const tbody = document.getElementById('eventsTableBody');
+      if (events.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" class="text-center text-muted py-3">No events yet. Run seed to create some.</td></tr>`;
+      } else {
+        tbody.innerHTML = events.map(e => `
+          <tr>
+            <td>${e.event_id}</td>
+            <td>${e.name}</td>
+            <td>${e.sport_name}</td>
+            <td>${new Date(e.start_time).toLocaleString('en-GB', { day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' })}</td>
+            <td>${statusBadge(e.status)}</td>
+            <td>${e.result || '<span class="text-muted">-</span>'}</td>
+          </tr>`).join('');
+      }
+    } catch {}
+  }
+
+  // ── Demo management ────────────────────────────────────────────────────────
+  async function seedData() {
+    const btn = document.getElementById('seedBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Seeding...';
+    try {
+      const r = await fetch('/api/admin/seed', { method: 'POST' });
+      const d = await r.json();
+      r.ok ? ok('seedMsg', d.message) : err('seedMsg', `${d.error}: ${d.details || ''}`);
+      if (r.ok) refreshAll();
+    } finally {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-play-circle me-2"></i>Run Seed';
+    }
+  }
+  window.seedData = seedData;
+
+  async function fullReset() {
+    if (!confirm('This will delete ALL events, bets, and sports, then re-seed. Continue?')) return;
+    flash('resetMsg', `<div class="alert alert-info py-2 mt-2"><span class="spinner-border spinner-border-sm me-2"></span>Wiping data…</div>`);
+    try {
+      const wipe = await fetch('/api/admin/data/all', { method: 'DELETE' });
+      if (!wipe.ok) { err('resetMsg', 'Wipe failed'); return; }
+      flash('resetMsg', `<div class="alert alert-info py-2 mt-2"><span class="spinner-border spinner-border-sm me-2"></span>Re-seeding…</div>`);
+      const seed = await fetch('/api/admin/seed', { method: 'POST' });
+      const d = await seed.json();
+      seed.ok ? ok('resetMsg', 'Reset complete — fresh demo data loaded') : err('resetMsg', d.error);
+      refreshAll();
+    } catch { err('resetMsg', 'Error during reset'); }
+  }
+  window.fullReset = fullReset;
+
+  async function resetBalances() {
+    const amount = document.getElementById('balanceAmount').value;
+    if (!amount || parseFloat(amount) < 0) { err('balanceMsg', 'Enter a valid amount'); return; }
+    const r = await fetch('/api/admin/reset-balances', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ amount: parseFloat(amount) })
+    });
+    const d = await r.json();
+    r.ok ? ok('balanceMsg', `Set ${d.affected} account(s) to $${parseFloat(amount).toFixed(2)}`) : err('balanceMsg', d.error);
+    if (r.ok) loadUsers();
+  }
+  window.resetBalances = resetBalances;
+
+  async function clearBets() {
+    if (!confirm('Delete ALL bets and bet history? This cannot be undone.')) return;
+    const r = await fetch('/api/admin/data/bets', { method: 'DELETE' });
+    r.ok ? ok('clearMsg', 'All bets cleared') : err('clearMsg', (await r.json()).error);
+    if (r.ok) refreshAll();
+  }
+  window.clearBets = clearBets;
+
+  async function clearEvents() {
+    if (!confirm('Delete ALL events, odds, and related bets? This cannot be undone.')) return;
+    const r = await fetch('/api/admin/data/events', { method: 'DELETE' });
+    r.ok ? ok('clearMsg', 'Events, odds, and bets cleared') : err('clearMsg', (await r.json()).error);
+    if (r.ok) refreshAll();
+  }
+  window.clearEvents = clearEvents;
+
+  async function clearAll() {
+    if (!confirm('⚠️ This will delete ALL sports, events, odds, bets, and transactions.\nUser accounts are kept but balances remain.\n\nAre you sure?')) return;
+    const r = await fetch('/api/admin/data/all', { method: 'DELETE' });
+    r.ok ? ok('clearMsg', 'Database wiped (users and accounts retained)') : err('clearMsg', (await r.json()).error);
+    if (r.ok) refreshAll();
+  }
+  window.clearAll = clearAll;
+
+  // ── Event / odds management ────────────────────────────────────────────────
+  async function createEvent() {
+    const sport_id = document.getElementById('newEventSport').value;
+    const name = document.getElementById('newEventName').value.trim();
+    const start_time = document.getElementById('newEventTime').value;
+    const description = document.getElementById('newEventDesc').value.trim();
+    if (!sport_id || !name || !start_time) { err('createEventMsg', 'Sport, name, and start time are required'); return; }
+
+    const r = await fetch('/api/admin/events', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sport_id, name, start_time: start_time.replace('T', ' ') + ':00', description })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      ok('createEventMsg', `Event created (ID: ${d.event_id})`);
+      document.getElementById('newEventName').value = '';
+      document.getElementById('newEventDesc').value = '';
+      loadDropdowns();
+    } else { err('createEventMsg', d.error); }
+  }
+  window.createEvent = createEvent;
+
+  async function addOdds() {
+    const event_id = document.getElementById('oddsEvent').value;
+    const market_type = document.getElementById('oddsMarket').value.trim();
+    const selection_name = document.getElementById('oddsSelection').value.trim();
+    const decimal_odds = parseFloat(document.getElementById('oddsDecimal').value);
+    if (!event_id || !market_type || !selection_name || !decimal_odds || decimal_odds < 1.01) {
+      err('oddsMsg', 'All fields required, odds must be ≥ 1.01'); return;
+    }
+    const r = await fetch('/api/admin/odds', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ event_id, market_type, selection_name, decimal_odds })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      ok('oddsMsg', `Odds added (ID: ${d.odds_id})`);
+      document.getElementById('oddsSelection').value = '';
+      document.getElementById('oddsDecimal').value = '';
+    } else { err('oddsMsg', d.error); }
+  }
+  window.addOdds = addOdds;
+
+  async function resolveEvent() {
+    const event_id = document.getElementById('resolveEvent').value;
+    const result = document.getElementById('resolveResult').value.trim();
+    if (!event_id || !result) { err('resolveMsg', 'Select an event and enter the result'); return; }
+    if (!confirm(`Resolve event with result "${result}"? This will settle all bets and cannot be undone.`)) return;
+
+    const r = await fetch(`/api/admin/events/${event_id}/resolve`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ result })
+    });
+    const d = await r.json();
+    if (r.ok) {
+      ok('resolveMsg', 'Event resolved. All bets settled.');
+      document.getElementById('resolveResult').value = '';
+      refreshAll();
+    } else { err('resolveMsg', d.error); }
+  }
+  window.resolveEvent = resolveEvent;
+
+  refreshAll();
+</script>
+</body>
+</html>

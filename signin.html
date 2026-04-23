@@ -128,7 +128,7 @@
 
       if (response.ok) {
       localStorage.setItem('user', JSON.stringify(data.user));
-      window.location.href = 'index.html';
+      window.location.href = 'dashboard.html';
       } else {
         // error message
         errorMsg.textContent = data.error ?? 'Login failed. Try again.';

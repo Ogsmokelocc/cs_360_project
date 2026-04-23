@@ -109,10 +109,15 @@
             </div>
 
             <div class = "mb-4">
+                <label class = "form-label">DATE OF BIRTH</label>
+                <input type = "date" id = "dob" class = "form-control">
+            </div>
+
+            <div class = "mb-4">
                 <label class = "form-label">PASSWORD</label>
                 <input type = "password" id = "password" class = "form-control" placeholder = "**********">
             </div>
-            
+
             <button type="button" class="btn btn-custom w-100" onclick="registerUser()">
             CREATE ACCOUNT →
             </button>
@@ -126,30 +131,26 @@
             const firstname = document.getElementById('firstname').value.trim();
             const lastname  = document.getElementById('lastname').value.trim();
             const email     = document.getElementById('email').value.trim();
+            const dob       = document.getElementById('dob').value;
             const password  = document.getElementById('password').value;
             const errorMsg  = document.getElementById('error-msg');
 
-            // does validation
             if (!firstname || !lastname || !email || !password) {
-                errorMsg.textContent = 'Please fill in all fields.';
+                errorMsg.textContent = 'Please fill in all required fields.';
                 return;
             }
 
-            // sends the data to server using  fetch
             try {
-                const response = await fetch('http://localhost:3000/register', {
+                const response = await fetch('/register', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'  // sends json
-                },
-                body: JSON.stringify({ firstname, lastname, email, password })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ firstname, lastname, email, password, date_of_birth: dob || undefined })
                 });
 
-                const data = await response.json(); //server response
+                const data = await response.json();
 
                 if (response.ok) {
-                // good
-                window.location.href = 'index.html';
+                window.location.href = 'signin.html';
                 } else {
                 // bad
                 errorMsg.textContent = data.error ?? 'Registration failed.';

@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Markets - Bull Market</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .top-nav { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .navbar-brand { font-weight: bold; font-size: 1.4rem; color: #000; }
+    .nav-link { color: #000 !important; font-weight: 500; }
+    .nav-link:hover { color: #D72323 !important; }
+    .filter-bar { background: #fff; border-radius: 12px; padding: 1rem 1.25rem; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 1.5rem; }
+    .filter-btn { border-radius: 20px; font-size: 0.875rem; }
+    .filter-btn.active { background-color: #000; color: #fff; border-color: #000; }
+    .event-card { border-radius: 12px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); transition: transform 0.2s; }
+    .event-card:hover { transform: translateY(-3px); box-shadow: 0 6px 16px rgba(0,0,0,0.12); }
+    .badge-live { background-color: #D72323; animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.6} }
+    .badge-upcoming { background-color: #000; }
+    .badge-finished { background-color: #6c757d; }
+    .odds-btn { background: #f8f9fa; border: 1.5px solid #dee2e6; border-radius: 8px; font-size: 0.85rem; font-weight: 600; cursor: pointer; transition: all 0.15s; padding: 0.35rem 0.6rem; }
+    .odds-btn:hover { background: #000; color: #fff; border-color: #000; }
+    .sport-section-title { font-weight: 700; font-size: 1.1rem; border-left: 4px solid #D72323; padding-left: 0.75rem; margin-bottom: 1rem; margin-top: 1.5rem; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg top-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="50" height="50" class="me-2">
+      BULL MARKET
+    </a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navMenu">
+      <ul class="navbar-nav me-auto">
+        <li class="nav-item"><a class="nav-link fw-bold" href="markets.html"><i class="bi bi-bar-chart-line me-1"></i>Markets</a></li>
+        <li class="nav-item"><a class="nav-link" href="dashboard.html">Dashboard</a></li>
+        <li class="nav-item"><a class="nav-link" href="account.html"><i class="bi bi-wallet2 me-1"></i>Account</a></li>
+      </ul>
+      <div class="d-flex" id="nav-auth"></div>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+
+  <h1 class="fw-bold mb-4">Markets</h1>
+
+  <!-- Filters -->
+  <div class="filter-bar d-flex flex-wrap gap-2 align-items-center">
+    <div class="me-3">
+      <strong class="small">Status:</strong>
+    </div>
+    <button class="btn btn-outline-secondary filter-btn active" data-status="">All</button>
+    <button class="btn btn-outline-secondary filter-btn" data-status="live">🔴 Live</button>
+    <button class="btn btn-outline-secondary filter-btn" data-status="upcoming">Upcoming</button>
+    <button class="btn btn-outline-secondary filter-btn" data-status="finished">Finished</button>
+    <div class="vr mx-2 d-none d-md-block"></div>
+    <div class="me-2">
+      <strong class="small">Sport:</strong>
+    </div>
+    <div id="sportFilters" class="d-flex flex-wrap gap-2">
+      <button class="btn btn-outline-secondary filter-btn active" data-sport="">All Sports</button>
+    </div>
+  </div>
+
+  <div id="eventsContainer">
+    <div class="text-center py-5 text-muted">Loading markets...</div>
+  </div>
+
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  const stored = localStorage.getItem('user');
+  const user = stored ? JSON.parse(stored) : null;
+
+  const navAuth = document.getElementById('nav-auth');
+  if (user) {
+    navAuth.innerHTML = `
+      <span class="navbar-text me-3 fw-semibold">👤 ${user.username}</span>
+      <button class="btn btn-outline-dark btn-sm" onclick="logout()">Log out</button>`;
+  } else {
+    navAuth.innerHTML = `
+      <a href="signin.html" class="btn btn-outline-dark me-2">Sign in</a>
+      <a href="register.html" class="btn btn-dark">Register</a>`;
+  }
+  function logout() { localStorage.removeItem('user'); window.location.href = 'index.html'; }
+
+  let activeStatus = '';
+  let activeSport = '';
+  let allEvents = [];
+
+  function statusBadge(status) {
+    const map = { live: 'badge-live', upcoming: 'badge-upcoming', finished: 'badge-finished' };
+    return `<span class="badge ${map[status] || 'bg-secondary'}">${status.toUpperCase()}</span>`;
+  }
+
+  function formatDate(dt) {
+    return new Date(dt).toLocaleString('en-GB', { weekday:'short', day:'numeric', month:'short', hour:'2-digit', minute:'2-digit' });
+  }
+
+  function renderEvents() {
+    const filtered = allEvents.filter(ev => {
+      const matchStatus = !activeStatus || ev.status === activeStatus;
+      const matchSport = !activeSport || String(ev.sport_id) === activeSport;
+      return matchStatus && matchSport;
+    });
+
+    if (filtered.length === 0) {
+      document.getElementById('eventsContainer').innerHTML = `<div class="text-center py-5 text-muted">No events match your filters</div>`;
+      return;
+    }
+
+    // Group by sport
+    const bySport = {};
+    for (const ev of filtered) {
+      if (!bySport[ev.sport_name]) bySport[ev.sport_name] = [];
+      bySport[ev.sport_name].push(ev);
+    }
+
+    let html = '';
+    for (const [sport, events] of Object.entries(bySport)) {
+      html += `<div class="sport-section-title">${sport}</div><div class="row g-3 mb-2">`;
+      for (const ev of events) {
+        const topOdds = ev.odds ? ev.odds.slice(0, 3) : [];
+        const oddsHtml = topOdds.map(o =>
+          `<button class="odds-btn" onclick="window.location='event.html?id=${ev.event_id}'" title="${o.selection_name}">${o.selection_name.length > 10 ? o.selection_name.slice(0,9)+'…' : o.selection_name} <strong>${parseFloat(o.decimal_odds).toFixed(2)}</strong></button>`
+        ).join('');
+
+        html += `
+          <div class="col-md-6 col-lg-4">
+            <div class="event-card card p-3 h-100">
+              <div class="d-flex justify-content-between align-items-start mb-2">
+                <div class="fw-semibold" style="font-size:0.95rem">${ev.name}</div>
+                ${statusBadge(ev.status)}
+              </div>
+              <div class="small text-muted mb-3">${formatDate(ev.start_time)}</div>
+              <div class="d-flex flex-wrap gap-1 mt-auto">${oddsHtml}</div>
+              <a href="event.html?id=${ev.event_id}" class="btn btn-dark btn-sm mt-3">View Market →</a>
+            </div>
+          </div>`;
+      }
+      html += '</div>';
+    }
+
+    document.getElementById('eventsContainer').innerHTML = html;
+  }
+
+  async function loadSports() {
+    const r = await fetch('/api/sports');
+    const sports = await r.json();
+    const container = document.getElementById('sportFilters');
+    for (const s of sports) {
+      const btn = document.createElement('button');
+      btn.className = 'btn btn-outline-secondary filter-btn';
+      btn.dataset.sport = s.sport_id;
+      btn.textContent = s.name;
+      container.appendChild(btn);
+    }
+    document.querySelectorAll('[data-sport]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('[data-sport]').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        activeSport = btn.dataset.sport;
+        renderEvents();
+      });
+    });
+  }
+
+  async function loadEvents() {
+    const r = await fetch('/api/events');
+    const events = await r.json();
+
+    // Attach a quick odds preview (only for events list — we'll use the first 3 from a side fetch)
+    const oddsPromises = events.map(async ev => {
+      try {
+        const r2 = await fetch(`/api/events/${ev.event_id}`);
+        const data = await r2.json();
+        return { ...ev, odds: data.odds ? data.odds.filter(o => o.market_type === 'Match Winner') : [] };
+      } catch { return { ...ev, odds: [] }; }
+    });
+
+    allEvents = await Promise.all(oddsPromises);
+    renderEvents();
+  }
+
+  document.querySelectorAll('[data-status]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('[data-status]').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      activeStatus = btn.dataset.status;
+      renderEvents();
+    });
+  });
+
+  loadSports();
+  loadEvents();
+</script>
+</body>
+</html>
