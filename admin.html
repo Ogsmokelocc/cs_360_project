@@ -102,7 +102,7 @@
             <div class="fw-bold mb-1"><i class="bi bi-wallet2 text-warning me-2"></i>Set All Balances</div>
             <div class="text-muted small mb-2">Give every registered user the same balance — useful for demo wallets.</div>
             <div class="input-group mb-2">
-              <span class="input-group-text">£</span>
+              <span class="input-group-text">$</span>
               <input type="number" id="balanceAmount" class="form-control" value="500" min="0" step="10">
             </div>
             <button class="btn btn-warning demo-action-btn w-100 text-dark" onclick="resetBalances()">
@@ -298,7 +298,7 @@
           <td class="text-muted">${u.user_id}</td>
           <td><strong>${u.username}</strong></td>
           <td class="text-muted">${u.email}</td>
-          <td class="fw-semibold">£${parseFloat(u.balance ?? 0).toFixed(2)}</td>
+          <td class="fw-semibold">$${parseFloat(u.balance ?? 0).toFixed(2)}</td>
           <td>${u.bet_count}</td>
           <td class="text-muted small">${new Date(u.created_at).toLocaleDateString('en-GB')}</td>
         </tr>`).join('');
@@ -380,7 +380,7 @@
       body: JSON.stringify({ amount: parseFloat(amount) })
     });
     const d = await r.json();
-    r.ok ? ok('balanceMsg', `Set ${d.affected} account(s) to £${parseFloat(amount).toFixed(2)}`) : err('balanceMsg', d.error);
+    r.ok ? ok('balanceMsg', `Set ${d.affected} account(s) to $${parseFloat(amount).toFixed(2)}`) : err('balanceMsg', d.error);
     if (r.ok) loadUsers();
   }
   window.resetBalances = resetBalances;

@@ -64,8 +64,8 @@
     <div class="col-md-5">
       <div class="balance-card">
         <div class="text-white-50 small mb-1">Available Balance</div>
-        <div class="amount" id="balanceDisplay">£0.00</div>
-        <div class="text-white-50 small mt-2">GBP</div>
+        <div class="amount" id="balanceDisplay">$0.00</div>
+        <div class="text-white-50 small mt-2">USD</div>
       </div>
     </div>
     <div class="col-md-7 mt-3 mt-md-0">
@@ -87,16 +87,16 @@
         <div class="tab-content">
           <!-- Deposit -->
           <div class="tab-pane fade show active" id="depositTab">
-            <label class="form-label fw-semibold">Amount (£)</label>
+            <label class="form-label fw-semibold">Amount ($)</label>
             <div class="input-group mb-2">
-              <span class="input-group-text">£</span>
+              <span class="input-group-text">$</span>
               <input type="number" id="depositAmount" class="form-control" placeholder="0.00" min="1" step="0.01">
             </div>
             <div class="d-flex gap-2 mb-3">
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=10">£10</button>
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=25">£25</button>
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=50">£50</button>
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=100">£100</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=10">$10</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=25">$25</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=50">$50</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('depositAmount').value=100">$100</button>
             </div>
             <button class="btn btn-action" onclick="deposit()">Deposit Funds</button>
             <div id="depositMsg" class="mt-2"></div>
@@ -104,16 +104,16 @@
 
           <!-- Withdraw -->
           <div class="tab-pane fade" id="withdrawTab">
-            <label class="form-label fw-semibold">Amount (£)</label>
+            <label class="form-label fw-semibold">Amount ($)</label>
             <div class="input-group mb-2">
-              <span class="input-group-text">£</span>
+              <span class="input-group-text">$</span>
               <input type="number" id="withdrawAmount" class="form-control" placeholder="0.00" min="1" step="0.01">
             </div>
             <div class="d-flex gap-2 mb-3">
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=10">£10</button>
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=25">£25</button>
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=50">£50</button>
-              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=100">£100</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=10">$10</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=25">$25</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=50">$50</button>
+              <button class="btn btn-outline-secondary quick-amount flex-fill" onclick="document.getElementById('withdrawAmount').value=100">$100</button>
             </div>
             <button class="btn btn-action" onclick="withdraw()">Withdraw Funds</button>
             <div id="withdrawMsg" class="mt-2"></div>
@@ -151,7 +151,7 @@
   async function loadBalance() {
     const r = await fetch(`/api/users/${user.id}/account`);
     const acc = await r.json();
-    document.getElementById('balanceDisplay').textContent = `£${parseFloat(acc.balance).toFixed(2)}`;
+    document.getElementById('balanceDisplay').textContent = `$${parseFloat(acc.balance).toFixed(2)}`;
   }
 
   async function loadTransactions() {
@@ -173,7 +173,7 @@
             <span class="fw-semibold text-capitalize">${tx.type}</span>
             <div class="small text-muted">${formatDate(tx.created_at)}</div>
           </div>
-          <div class="fw-bold ${cls}" style="font-size:1.05rem">${sign}£${parseFloat(tx.amount).toFixed(2)}</div>
+          <div class="fw-bold ${cls}" style="font-size:1.05rem">${sign}$${parseFloat(tx.amount).toFixed(2)}</div>
         </div>`;
     }).join('');
 
@@ -193,7 +193,7 @@
     const data = await r.json();
 
     if (r.ok) {
-      msg.innerHTML = `<div class="alert alert-success py-2">Deposited £${amount.toFixed(2)}</div>`;
+      msg.innerHTML = `<div class="alert alert-success py-2">Deposited $${amount.toFixed(2)}</div>`;
       document.getElementById('depositAmount').value = '';
       loadBalance();
       loadTransactions();
@@ -216,7 +216,7 @@
     const data = await r.json();
 
     if (r.ok) {
-      msg.innerHTML = `<div class="alert alert-success py-2">Withdrawn £${amount.toFixed(2)}</div>`;
+      msg.innerHTML = `<div class="alert alert-success py-2">Withdrawn $${amount.toFixed(2)}</div>`;
       document.getElementById('withdrawAmount').value = '';
       loadBalance();
       loadTransactions();
