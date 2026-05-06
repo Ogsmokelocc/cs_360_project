@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Research - Bull Market</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    body { background-color: #f8f9fa; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    .top-nav { background-color: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+    .navbar-brand { font-weight: bold; font-size: 1.4rem; color: #000; }
+    .r-card { border-radius: 16px; border: none; box-shadow: 0 2px 8px rgba(0,0,0,0.07); margin-bottom: 1.5rem; }
+    .r-card .card-header { background: #000; color: #fff; border-radius: 16px 16px 0 0 !important; font-weight: 700; padding: 1rem 1.5rem; }
+    .stat-pill { background: #f0f0f0; border-radius: 8px; padding: 0.4rem 0.8rem; font-size: 0.85rem; font-weight: 600; }
+    .btn-run    { background-color: #D72323; color: #fff; border: none; font-weight: 600; }
+    .btn-run:hover    { background-color: #b01c1c; color: #fff; }
+    .btn-reveal { background-color: #000; color: #fff; border: none; font-weight: 600; }
+    .btn-reveal:hover { background-color: #333; color: #fff; }
+    .suspect-row  { background-color: rgba(215,35,35,0.06); }
+    .cluster0-row { background-color: rgba(13,110,253,0.05); }
+    .info-note  { background: #fff8e1; border-left: 4px solid #ffc107; border-radius: 0 8px 8px 0; padding: 0.6rem 1rem; font-size: 0.875rem; }
+    .score-bar  { height: 6px; border-radius: 3px; background: #dee2e6; display:inline-block; width:60px; vertical-align:middle; }
+    .score-fill { height: 100%; border-radius: 3px; background: linear-gradient(to right, #D72323, #ff6b6b); }
+    .accuracy-panel { background: #f8f9fa; border-radius: 12px; padding: 1rem 1.5rem; border: 2px solid #dee2e6; }
+    .accuracy-panel.revealed { border-color: #198754; background: #f0fff4; }
+    .method-metric { text-align:center; padding: 0 1.5rem; }
+    .method-metric + .method-metric { border-left: 1px solid #dee2e6; }
+    .method-label { font-size: 0.7rem; font-weight: 700; letter-spacing:.05em; text-transform:uppercase; margin-bottom:.25rem; }
+    .agree-group { border-radius: 12px; padding: 1rem; border: 1px solid #dee2e6; background: #fff; }
+    #scatterWrap { position: relative; height: 380px; }
+    .nav-tabs .nav-link { color: #495057; font-weight: 600; }
+    .nav-tabs .nav-link.active { color: #D72323; border-bottom-color: #D72323; }
+  </style>
+</head>
+<body>
+
+<nav class="navbar navbar-expand-lg top-nav">
+  <div class="container">
+    <a class="navbar-brand d-flex align-items-center" href="index.html">
+      <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="50" height="50" class="me-2">
+      BULL MARKET
+    </a>
+    <div class="ms-auto d-flex gap-2">
+      <a href="markets.html" class="btn btn-outline-dark btn-sm">Markets</a>
+      <a href="dashboard.html" class="btn btn-dark btn-sm">Dashboard</a>
+      <a href="admin.html" class="btn btn-outline-secondary btn-sm">Admin</a>
+    </div>
+  </div>
+</nav>
+
+<div class="container py-4">
+
+  <div class="d-flex align-items-center gap-3 mb-4">
+    <div>
+      <h1 class="fw-bold mb-0">Insider Trader Detection</h1>
+      <p class="text-muted mb-0 mt-1">Two unsupervised methods compared — neither knows who the actual insiders are.</p>
+    </div>
+    <span class="badge bg-danger ms-auto">Research</span>
+  </div>
+
+  <!-- Stats bar -->
+  <div class="r-card card mb-3">
+    <div class="card-body py-3 px-4">
+      <div class="d-flex flex-wrap gap-3 align-items-center">
+        <span class="text-muted small fw-semibold me-2">DATASET</span>
+        <span class="stat-pill"><i class="bi bi-people me-1"></i><span id="statUsers">—</span> users</span>
+        <span class="stat-pill"><i class="bi bi-calendar-check me-1"></i><span id="statEvents">—</span> finished events</span>
+        <span class="stat-pill"><i class="bi bi-receipt me-1"></i><span id="statBets">—</span> settled bets</span>
+        <span class="stat-pill text-muted" id="insiderStatPill" style="display:none">
+          <i class="bi bi-incognito me-1"></i><span id="statInsiders">—</span> true insiders
+        </span>
+        <a href="admin.html" class="btn btn-outline-secondary btn-sm ms-auto">
+          <i class="bi bi-database-add me-1"></i>Seed Data
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <!-- Algorithm explainer + run -->
+  <div class="r-card card">
+    <div class="card-header"><i class="bi bi-cpu me-2"></i>Methods</div>
+    <div class="card-body p-4">
+      <div class="row g-3 mb-4">
+        <div class="col-md-6">
+          <div class="border rounded-3 p-3 h-100">
+            <div class="fw-bold mb-1"><span class="badge bg-danger me-2">Z-Score</span>Statistical Baseline</div>
+            <div class="text-muted small">Extracts 4 features per user, normalises each with Z-scores, and sums them into a composite suspicion score. Users are ranked highest-to-lowest. Heuristic — it measures, but doesn't truly learn.</div>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="border rounded-3 p-3 h-100">
+            <div class="fw-bold mb-1"><span class="badge bg-primary me-2">K-Means</span>Unsupervised ML</div>
+            <div class="text-muted small">Runs k-means (k=2) with k-means++ initialisation on min-max normalised features. Iteratively discovers two natural clusters. The cluster with the higher mean win rate is labelled "suspected insiders" — no labels used during training.</div>
+          </div>
+        </div>
+      </div>
+      <div class="info-note mb-4">
+        <strong>Shared features:</strong> Win Rate · Avg ROI · Late Bet Ratio (% of bets placed &lt;4 hr before event start) · Stake Consistency (inverted coefficient of variation)
+      </div>
+      <button class="btn btn-run px-4 py-2" id="runBtn" onclick="runAnalysis()">
+        <i class="bi bi-play-circle me-2"></i>Run Both Methods
+      </button>
+      <span id="runMsg" class="ms-3 text-muted small"></span>
+    </div>
+  </div>
+
+  <!-- Results (hidden until analysis) -->
+  <div id="resultsSection" style="display:none">
+
+    <!-- Accuracy panel (shown after reveal) -->
+    <div class="r-card card" id="accuracyCard" style="display:none">
+      <div class="card-header"><i class="bi bi-trophy me-2"></i>Accuracy Comparison</div>
+      <div class="card-body p-4">
+        <div class="d-flex flex-wrap gap-0" id="accuracyPanel"></div>
+      </div>
+    </div>
+
+    <!-- Reveal button row -->
+    <div class="d-flex justify-content-end mb-3" id="revealRow">
+      <button class="btn btn-reveal px-4 py-2" id="revealBtn" onclick="revealTruth()">
+        <i class="bi bi-eye me-2"></i>Reveal Ground Truth
+      </button>
+    </div>
+
+    <!-- Method tabs -->
+    <div class="r-card card">
+      <div class="card-header p-0" style="background:#000; border-radius:16px 16px 0 0">
+        <ul class="nav nav-tabs border-0 px-3 pt-2" id="methodTabs">
+          <li class="nav-item">
+            <button class="nav-link active text-white" id="tab-zscore" onclick="switchTab('zscore')">
+              <span class="badge bg-danger me-1">Z</span> Z-Score
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link text-white" id="tab-kmeans" onclick="switchTab('kmeans')">
+              <span class="badge bg-primary me-1">K</span> K-Means
+            </button>
+          </li>
+          <li class="nav-item">
+            <button class="nav-link text-white" id="tab-compare" onclick="switchTab('compare')">
+              <i class="bi bi-intersect me-1"></i> Compare
+            </button>
+          </li>
+        </ul>
+      </div>
+      <div class="card-body p-0">
+
+        <!-- Z-Score tab -->
+        <div id="pane-zscore" class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>Rank</th><th>Username</th><th>Suspicion Score</th>
+                <th>Win Rate</th><th>Avg ROI</th><th>Late Bet %</th><th>Stake CV</th>
+                <th id="zVerdictHdr" style="display:none">Verdict</th>
+                <th id="zArchHdr" style="display:none">True Type</th>
+              </tr>
+            </thead>
+            <tbody id="zTable"></tbody>
+          </table>
+        </div>
+
+        <!-- K-Means tab -->
+        <div id="pane-kmeans" class="table-responsive" style="display:none">
+          <table class="table table-hover align-middle mb-0">
+            <thead class="table-dark">
+              <tr>
+                <th>Rank</th><th>Username</th><th>Cluster</th><th>Dist to Centroid</th>
+                <th>Win Rate</th><th>Avg ROI</th><th>Late Bet %</th><th>Stake CV</th>
+                <th id="kVerdictHdr" style="display:none">Verdict</th>
+                <th id="kArchHdr" style="display:none">True Type</th>
+              </tr>
+            </thead>
+            <tbody id="kTable"></tbody>
+          </table>
+        </div>
+
+        <!-- Compare tab -->
+        <div id="pane-compare" style="display:none; padding:1.5rem">
+          <p class="text-muted small mb-3">
+            Z-Score suspects = top 15 by composite score.
+            K-Means suspects = all users in the insider cluster.
+          </p>
+          <div class="row g-3" id="compareGrid"></div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Scatter chart -->
+    <div class="r-card card">
+      <div class="card-header"><i class="bi bi-scatter-chart me-2"></i>Win Rate vs Avg ROI
+        <span class="text-muted fw-normal small ms-2" id="chartSubtitle">— coloured by Z-Score suspects</span>
+      </div>
+      <div class="card-body p-4">
+        <div id="scatterWrap"><canvas id="scatterChart"></canvas></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  let zscoreData = [];
+  let kmeansData = [];
+  let truthData  = {};
+  let scatterInst = null;
+  let activeTab = 'zscore';
+  const ZSCORE_SUSPECTS = 15;
+
+  // ── Archetype display ───────────────────────────────────────────────────────
+  const ARCHETYPE_META = {
+    insider:      { label: 'Insider',      cls: 'bg-danger' },
+    sharp:        { label: 'Sharp Normal', cls: 'bg-warning text-dark' },
+    average:      { label: 'Average',      cls: 'bg-secondary' },
+    recreational: { label: 'Recreational', cls: 'bg-light text-dark border' },
+    highroller:   { label: 'High Roller',  cls: 'bg-info text-dark' },
+  };
+  function archetypeBadge(arch) {
+    const m = ARCHETYPE_META[arch] || { label: arch || '—', cls: 'bg-secondary' };
+    return `<span class="badge ${m.cls}" style="font-size:0.68rem">${m.label}</span>`;
+  }
+
+  // ── Stats ───────────────────────────────────────────────────────────────────
+  async function loadStats() {
+    try {
+      const r = await fetch('/api/research/stats');
+      const d = await r.json();
+      document.getElementById('statUsers').textContent  = d.users;
+      document.getElementById('statEvents').textContent = d.finished_events;
+      document.getElementById('statBets').textContent   = d.settled_bets;
+    } catch {}
+  }
+
+  // ── Run analysis ────────────────────────────────────────────────────────────
+  async function runAnalysis() {
+    const btn = document.getElementById('runBtn');
+    const msg = document.getElementById('runMsg');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Analysing…';
+    msg.textContent = '';
+    try {
+      const r = await fetch('/api/research/analysis');
+      const d = await r.json();
+      if (!r.ok || (!d.zscore?.length && !d.kmeans?.length)) {
+        msg.textContent = d.message || 'No data — seed research data first.';
+        return;
+      }
+      zscoreData = d.zscore;
+      kmeansData = d.kmeans;
+      renderZTable();
+      renderKTable();
+      renderCompare();
+      renderChart();
+      document.getElementById('resultsSection').style.display = '';
+    } catch (e) {
+      msg.textContent = 'Error: ' + e.message;
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-play-circle me-2"></i>Run Both Methods';
+    }
+  }
+
+  // ── Reveal truth ────────────────────────────────────────────────────────────
+  async function revealTruth() {
+    const btn = document.getElementById('revealBtn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Loading…';
+    try {
+      const r = await fetch('/api/research/truth');
+      truthData = await r.json();
+
+      const insiderCount = Object.values(truthData).filter(v => v.is_insider).length;
+      document.getElementById('statInsiders').textContent = insiderCount;
+      document.getElementById('insiderStatPill').style.display = '';
+
+      // Z-score accuracy
+      const zSuspects  = zscoreData.slice(0, ZSCORE_SUSPECTS);
+      const zTP = zSuspects.filter(u => truthData[u.user_id]?.is_insider).length;
+      const zP  = zSuspects.length > 0 ? zTP / zSuspects.length : 0;
+      const zR  = insiderCount > 0 ? zTP / insiderCount : 0;
+      const zF1 = (zP + zR) > 0 ? 2 * zP * zR / (zP + zR) : 0;
+
+      // K-means accuracy
+      const kSuspects  = kmeansData.filter(u => u.is_insider_cluster);
+      const kTP = kSuspects.filter(u => truthData[u.user_id]?.is_insider).length;
+      const kP  = kSuspects.length > 0 ? kTP / kSuspects.length : 0;
+      const kR  = insiderCount > 0 ? kTP / insiderCount : 0;
+      const kF1 = (kP + kR) > 0 ? 2 * kP * kR / (kP + kR) : 0;
+
+      document.getElementById('accuracyPanel').innerHTML = `
+        <div class="method-metric flex-fill">
+          <div class="method-label text-danger">Z-Score (top ${ZSCORE_SUSPECTS})</div>
+          <div class="d-flex gap-4 justify-content-center flex-wrap">
+            ${metricBlock('Precision', zP)} ${metricBlock('Recall', zR)} ${metricBlock('F1', zF1, true)}
+          </div>
+          <div class="text-muted mt-1" style="font-size:0.75rem">${zTP} of ${insiderCount} insiders found · ${zTP} of ${zSuspects.length} flags correct</div>
+        </div>
+        <div class="method-metric flex-fill">
+          <div class="method-label text-primary">K-Means (${kSuspects.length} in cluster)</div>
+          <div class="d-flex gap-4 justify-content-center flex-wrap">
+            ${metricBlock('Precision', kP)} ${metricBlock('Recall', kR)} ${metricBlock('F1', kF1, true)}
+          </div>
+          <div class="text-muted mt-1" style="font-size:0.75rem">${kTP} of ${insiderCount} insiders found · ${kTP} of ${kSuspects.length} flags correct</div>
+        </div>`;
+
+      document.getElementById('accuracyCard').style.display = '';
+      document.getElementById('zVerdictHdr').style.display = '';
+      document.getElementById('kVerdictHdr').style.display = '';
+      document.getElementById('zArchHdr').style.display = '';
+      document.getElementById('kArchHdr').style.display = '';
+      renderZTable();
+      renderKTable();
+      renderCompare();
+      renderChart();
+    } catch (e) {
+      alert('Failed to load truth: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.innerHTML = '<i class="bi bi-eye me-2"></i>Reveal Ground Truth';
+    }
+  }
+
+  function metricBlock(label, val, isF1 = false) {
+    const display = isF1 ? val.toFixed(2) : (val * 100).toFixed(0) + '%';
+    const color = val >= 0.7 ? 'text-success' : val >= 0.4 ? 'text-warning' : 'text-danger';
+    return `<div class="text-center"><div class="fw-bold fs-5 ${color}">${display}</div><div class="text-muted" style="font-size:0.75rem">${label}</div></div>`;
+  }
+
+  // ── Tab switching ───────────────────────────────────────────────────────────
+  function switchTab(tab) {
+    activeTab = tab;
+    ['zscore','kmeans','compare'].forEach(t => {
+      document.getElementById(`pane-${t}`).style.display = t === tab ? '' : 'none';
+      document.getElementById(`tab-${t}`).classList.toggle('active', t === tab);
+    });
+    const subtitles = {
+      zscore:  '— coloured by Z-Score suspects',
+      kmeans:  '— coloured by K-Means clusters',
+      compare: '— coloured by method agreement',
+    };
+    document.getElementById('chartSubtitle').textContent = subtitles[tab];
+    renderChart();
+  }
+
+  // ── Z-Score table ───────────────────────────────────────────────────────────
+  function renderZTable() {
+    const hasTruth = Object.keys(truthData).length > 0;
+    const maxScore = zscoreData[0]?.composite_score || 1;
+    document.getElementById('zTable').innerHTML = zscoreData.map((u, i) => {
+      const isSuspect = i < ZSCORE_SUSPECTS;
+      const truth     = hasTruth ? truthData[u.user_id] : null;
+      const isInsider = truth?.is_insider;
+      const fillPct   = maxScore !== 0 ? Math.max(0, (u.composite_score / maxScore) * 100).toFixed(1) : 0;
+      return `<tr class="${isSuspect ? 'suspect-row' : ''}">
+        <td><span class="fw-bold ${isSuspect ? 'text-danger' : 'text-muted'}">#${i+1}</span></td>
+        <td>
+          <strong>${u.username}</strong>
+          ${isSuspect ? '<span class="badge bg-danger bg-opacity-10 text-danger ms-1" style="font-size:0.68rem">SUSPECT</span>' : ''}
+          ${isInsider ? '<span class="badge bg-danger ms-1" style="font-size:0.68rem">INSIDER</span>' : ''}
+        </td>
+        <td>
+          <span class="fw-semibold me-2" style="min-width:3rem;display:inline-block">${u.composite_score > 0 ? '+' : ''}${u.composite_score}</span>
+          <span class="score-bar"><span class="score-fill" style="width:${fillPct}%;display:block"></span></span>
+        </td>
+        <td>${(u.win_rate*100).toFixed(1)}%</td>
+        <td class="${u.avg_roi>0?'text-success':'text-danger'}">${u.avg_roi>0?'+':''}${(u.avg_roi*100).toFixed(1)}%</td>
+        <td>${(u.late_bet_ratio*100).toFixed(1)}%</td>
+        <td>${u.stake_cv.toFixed(2)}</td>
+        ${hasTruth ? `<td>${isInsider
+          ? '<span class="badge bg-danger" style="font-size:0.7rem"><i class="bi bi-exclamation-triangle-fill me-1"></i>Confirmed</span>'
+          : '<span class="badge bg-secondary" style="font-size:0.7rem">Normal</span>'}</td>` : ''}
+        ${hasTruth ? `<td>${archetypeBadge(truth?.archetype)}</td>` : ''}
+      </tr>`;
+    }).join('');
+  }
+
+  // ── K-Means table ───────────────────────────────────────────────────────────
+  function renderKTable() {
+    const hasTruth = Object.keys(truthData).length > 0;
+    let rank = 0;
+    document.getElementById('kTable').innerHTML = kmeansData.map(u => {
+      rank++;
+      const truth     = hasTruth ? truthData[u.user_id] : null;
+      const isInsider = truth?.is_insider;
+      const rowClass  = u.is_insider_cluster ? 'suspect-row' : 'cluster0-row';
+      const clusterBadge = u.is_insider_cluster
+        ? '<span class="badge bg-danger">Suspected Insiders</span>'
+        : '<span class="badge bg-primary">Normal</span>';
+      return `<tr class="${rowClass}">
+        <td><span class="fw-bold ${u.is_insider_cluster ? 'text-danger' : 'text-primary'}">#${rank}</span></td>
+        <td>
+          <strong>${u.username}</strong>
+          ${isInsider ? '<span class="badge bg-danger ms-1" style="font-size:0.68rem">INSIDER</span>' : ''}
+        </td>
+        <td>${clusterBadge}</td>
+        <td>${u.dist_to_centroid.toFixed(3)}</td>
+        <td>${(u.win_rate*100).toFixed(1)}%</td>
+        <td class="${u.avg_roi>0?'text-success':'text-danger'}">${u.avg_roi>0?'+':''}${(u.avg_roi*100).toFixed(1)}%</td>
+        <td>${(u.late_bet_ratio*100).toFixed(1)}%</td>
+        <td>${u.stake_cv.toFixed(2)}</td>
+        ${hasTruth ? `<td>${isInsider
+          ? '<span class="badge bg-danger" style="font-size:0.7rem"><i class="bi bi-exclamation-triangle-fill me-1"></i>Confirmed</span>'
+          : '<span class="badge bg-secondary" style="font-size:0.7rem">Normal</span>'}</td>` : ''}
+        ${hasTruth ? `<td>${archetypeBadge(truth?.archetype)}</td>` : ''}
+      </tr>`;
+    }).join('');
+  }
+
+  // ── Compare tab ─────────────────────────────────────────────────────────────
+  function renderCompare() {
+    const hasTruth = Object.keys(truthData).length > 0;
+    const zIds = new Set(zscoreData.slice(0, ZSCORE_SUSPECTS).map(u => u.user_id));
+    const kIds = new Set(kmeansData.filter(u => u.is_insider_cluster).map(u => u.user_id));
+    const allIds = new Set([...zscoreData.map(u => u.user_id), ...kmeansData.map(u => u.user_id)]);
+    const allUsers = Object.fromEntries(zscoreData.map(u => [u.user_id, u.username]));
+    kmeansData.forEach(u => { allUsers[u.user_id] = u.username; });
+
+    const both    = [...allIds].filter(id => zIds.has(id) && kIds.has(id));
+    const zOnly   = [...allIds].filter(id => zIds.has(id) && !kIds.has(id));
+    const kOnly   = [...allIds].filter(id => !zIds.has(id) && kIds.has(id));
+    const neither = [...allIds].filter(id => !zIds.has(id) && !kIds.has(id));
+
+    const makeGroup = (title, ids, color, iconClass) => {
+      const tags = ids.map(id => {
+        const truth     = hasTruth ? truthData[id] : null;
+        const isInsider = truth?.is_insider;
+        return `<span class="badge ${isInsider ? 'bg-danger' : 'bg-secondary'} me-1 mb-1" style="font-size:0.75rem">
+          ${isInsider ? '<i class="bi bi-exclamation-triangle-fill me-1"></i>' : ''}${allUsers[id] || id}${hasTruth ? ' ' + archetypeBadge(truth?.archetype) : ''}
+        </span>`;
+      }).join('');
+      const insiderCount = hasTruth ? ids.filter(id => truthData[id]?.is_insider).length : null;
+      return `<div class="col-md-6">
+        <div class="agree-group h-100">
+          <div class="fw-bold mb-2"><i class="${iconClass} me-2 ${color}"></i>${title} <span class="badge ${color === 'text-danger' ? 'bg-danger' : color === 'text-primary' ? 'bg-primary' : color === 'text-warning' ? 'bg-warning text-dark' : 'bg-secondary'} ms-1">${ids.length}</span>
+          ${insiderCount !== null ? `<span class="text-muted small ms-2">(${insiderCount} confirmed insiders)</span>` : ''}
+          </div>
+          <div>${ids.length > 0 ? tags : '<span class="text-muted small">None</span>'}</div>
+        </div>
+      </div>`;
+    };
+
+    document.getElementById('compareGrid').innerHTML =
+      makeGroup('Flagged by Both',       both,    'text-danger',  'bi bi-check2-circle') +
+      makeGroup('Z-Score Only',          zOnly,   'text-warning', 'bi bi-bar-chart-fill') +
+      makeGroup('K-Means Only',          kOnly,   'text-primary', 'bi bi-diagram-3') +
+      makeGroup('Neither (not flagged)', neither, 'text-secondary','bi bi-dash-circle');
+  }
+
+  // ── Scatter chart ───────────────────────────────────────────────────────────
+  function renderChart() {
+    const hasTruth = Object.keys(truthData).length > 0;
+    const toPoint = u => ({ x: +(u.win_rate*100).toFixed(2), y: +(u.avg_roi*100).toFixed(2), username: u.username, user_id: u.user_id });
+
+    let datasets = [];
+
+    if (activeTab === 'zscore') {
+      const suspects = zscoreData.slice(0, ZSCORE_SUSPECTS);
+      const normals  = zscoreData.slice(ZSCORE_SUSPECTS);
+      datasets = [
+        { label: `Top ${ZSCORE_SUSPECTS} Suspects`, data: suspects.map(toPoint),
+          backgroundColor: suspects.map(u => truthData[u.user_id]?.is_insider ? 'rgba(215,35,35,0.85)' : 'rgba(215,35,35,0.45)'),
+          borderColor: suspects.map(u => truthData[u.user_id]?.is_insider ? '#000' : 'rgba(215,35,35,0.8)'),
+          borderWidth: suspects.map(u => truthData[u.user_id]?.is_insider ? 2.5 : 1), pointRadius: 7, pointHoverRadius: 9 },
+        { label: 'Not Flagged', data: normals.map(toPoint),
+          backgroundColor: normals.map(u => truthData[u.user_id]?.is_insider ? 'rgba(255,165,0,0.7)' : 'rgba(120,120,120,0.3)'),
+          borderColor: normals.map(u => truthData[u.user_id]?.is_insider ? '#e67e00' : 'rgba(120,120,120,0.4)'),
+          borderWidth: normals.map(u => truthData[u.user_id]?.is_insider ? 2.5 : 1), pointRadius: 5, pointHoverRadius: 7 },
+      ];
+
+    } else if (activeTab === 'kmeans') {
+      const insiders = kmeansData.filter(u => u.is_insider_cluster);
+      const normal   = kmeansData.filter(u => !u.is_insider_cluster);
+      // Centroid proxies: representative points (user closest to centroid in each cluster)
+      const insiderCentroid = insiders.length ? insiders.reduce((a, b) => a.dist_to_centroid < b.dist_to_centroid ? a : b) : null;
+      const normalCentroid  = normal.length   ? normal.reduce((a, b)   => a.dist_to_centroid < b.dist_to_centroid ? a : b)   : null;
+
+      datasets = [
+        { label: 'Insider Cluster', data: insiders.map(toPoint),
+          backgroundColor: insiders.map(u => truthData[u.user_id]?.is_insider ? 'rgba(215,35,35,0.85)' : 'rgba(215,35,35,0.45)'),
+          borderColor: insiders.map(u => truthData[u.user_id]?.is_insider ? '#000' : 'rgba(215,35,35,0.8)'),
+          borderWidth: insiders.map(u => truthData[u.user_id]?.is_insider ? 2.5 : 1), pointRadius: 7, pointHoverRadius: 9 },
+        { label: 'Normal Cluster', data: normal.map(toPoint),
+          backgroundColor: normal.map(u => truthData[u.user_id]?.is_insider ? 'rgba(255,165,0,0.7)' : 'rgba(13,110,253,0.3)'),
+          borderColor: normal.map(u => truthData[u.user_id]?.is_insider ? '#e67e00' : 'rgba(13,110,253,0.5)'),
+          borderWidth: normal.map(u => truthData[u.user_id]?.is_insider ? 2.5 : 1), pointRadius: 5, pointHoverRadius: 7 },
+        ...(insiderCentroid ? [{ label: 'Insider Centroid ✕', data: [toPoint(insiderCentroid)],
+          backgroundColor: 'rgba(215,35,35,1)', borderColor: '#fff', borderWidth: 2,
+          pointRadius: 12, pointHoverRadius: 14, pointStyle: 'crossRot' }] : []),
+        ...(normalCentroid  ? [{ label: 'Normal Centroid ✕',  data: [toPoint(normalCentroid)],
+          backgroundColor: 'rgba(13,110,253,1)', borderColor: '#fff', borderWidth: 2,
+          pointRadius: 12, pointHoverRadius: 14, pointStyle: 'crossRot' }] : []),
+      ];
+
+    } else {
+      // Compare tab: 4 colours
+      const zIds = new Set(zscoreData.slice(0, ZSCORE_SUSPECTS).map(u => u.user_id));
+      const kIds = new Set(kmeansData.filter(u => u.is_insider_cluster).map(u => u.user_id));
+      const allU = [...new Map([...zscoreData, ...kmeansData].map(u => [u.user_id, u])).values()];
+      const buckets = {
+        both:    allU.filter(u => zIds.has(u.user_id) && kIds.has(u.user_id)),
+        zOnly:   allU.filter(u => zIds.has(u.user_id) && !kIds.has(u.user_id)),
+        kOnly:   allU.filter(u => !zIds.has(u.user_id) && kIds.has(u.user_id)),
+        neither: allU.filter(u => !zIds.has(u.user_id) && !kIds.has(u.user_id)),
+      };
+      datasets = [
+        { label: 'Both flagged',    data: buckets.both.map(toPoint),    backgroundColor: 'rgba(215,35,35,0.75)',  pointRadius: 8 },
+        { label: 'Z-Score only',    data: buckets.zOnly.map(toPoint),   backgroundColor: 'rgba(255,165,0,0.75)', pointRadius: 7 },
+        { label: 'K-Means only',    data: buckets.kOnly.map(toPoint),   backgroundColor: 'rgba(13,110,253,0.65)',pointRadius: 7 },
+        { label: 'Neither',         data: buckets.neither.map(toPoint), backgroundColor: 'rgba(120,120,120,0.3)',pointRadius: 5 },
+      ];
+    }
+
+    const tooltipLabel = ctx => {
+      const p = ctx.raw;
+      const t = truthData[p.user_id];
+      const suffix = t?.is_insider
+        ? ` ★ ${ARCHETYPE_META[t.archetype]?.label || 'INSIDER'}`
+        : (t ? ` (${ARCHETYPE_META[t.archetype]?.label || t.archetype})` : '');
+      return ` ${p.username}${suffix}  win:${p.x.toFixed(1)}%  roi:${p.y>0?'+':''}${p.y.toFixed(1)}%`;
+    };
+
+    if (scatterInst) scatterInst.destroy();
+    scatterInst = new Chart(document.getElementById('scatterChart'), {
+      type: 'scatter',
+      data: { datasets },
+      options: {
+        responsive: true, maintainAspectRatio: false,
+        plugins: {
+          legend: { position: 'top' },
+          tooltip: { callbacks: { label: tooltipLabel } },
+        },
+        scales: {
+          x: { title: { display: true, text: 'Win Rate (%)' } },
+          y: { title: { display: true, text: 'Avg ROI (%)' } },
+        },
+      },
+    });
+  }
+
+  loadStats();
+</script>
+</body>
+</html>

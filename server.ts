@@ -3,6 +3,7 @@ import type { Request, Response } from 'express';
 import cors from 'cors';
 import db from './db.js';
 import bcrypt from 'bcrypt';
+import { faker } from '@faker-js/faker';
 
 const app = express();
 const PORT = 3000;
@@ -26,9 +27,95 @@ async function initDb() {
         INDEX idx_oh_odds  (odds_id)
       )
     `);
+    await db.query(`
+      CREATE TABLE IF NOT EXISTS research_seed_truth (
+        id         INT AUTO_INCREMENT PRIMARY KEY,
+        user_id    INT         NOT NULL,
+        is_insider TINYINT(1)  NOT NULL DEFAULT 0,
+        archetype  VARCHAR(20) NOT NULL DEFAULT '',
+        CONSTRAINT fk_rst_user FOREIGN KEY (user_id) REFERENCES users(user_id) ON DELETE CASCADE
+      )
+    `);
+    // Add archetype column to existing tables created before this migration
+    await db.query(`
+      ALTER TABLE research_seed_truth
+      ADD COLUMN IF NOT EXISTS archetype VARCHAR(20) NOT NULL DEFAULT ''
+    `).catch(() => {});
   } catch (e) { console.error('initDb error:', e); }
 }
 initDb();
+
+function minMaxNormalize(matrix: number[][]): number[][] {
+  const dims = matrix[0]!.length;
+  const mins = Array.from({ length: dims }, (_, d) => Math.min(...matrix.map(r => r[d]!)));
+  const maxs = Array.from({ length: dims }, (_, d) => Math.max(...matrix.map(r => r[d]!)));
+  return matrix.map(row =>
+    row.map((v, d) => maxs[d]! === mins[d]! ? 0 : (v - mins[d]!) / (maxs[d]! - mins[d]!))
+  );
+}
+
+function euclidean(a: number[], b: number[]): number {
+  return Math.sqrt(a.reduce((sum, v, i) => sum + Math.pow(v - b[i]!, 2), 0));
+}
+
+function kMeans(data: number[][], k: number, maxIter = 100): { assignments: number[]; centroids: number[][] } {
+  const n = data.length;
+  const dims = data[0]!.length;
+
+  // K-means++ initialisation
+  const centroids: number[][] = [[...data[Math.floor(Math.random() * n)]!]];
+  while (centroids.length < k) {
+    const dists = data.map(pt => Math.min(...centroids.map(c => euclidean(pt, c))));
+    const total = dists.reduce((a, b) => a + b * b, 0);
+    let rand = Math.random() * total;
+    let chosen = 0;
+    for (let i = 0; i < n; i++) {
+      rand -= dists[i]! * dists[i]!;
+      if (rand <= 0) { chosen = i; break; }
+    }
+    centroids.push([...data[chosen]!]);
+  }
+
+  let assignments = new Array<number>(n).fill(0);
+  for (let iter = 0; iter < maxIter; iter++) {
+    const next = data.map(pt => {
+      let best = 0, bestD = Infinity;
+      for (let c = 0; c < k; c++) {
+        const d = euclidean(pt, centroids[c]!);
+        if (d < bestD) { bestD = d; best = c; }
+      }
+      return best;
+    });
+    if (next.every((a, i) => a === assignments[i])) break;
+    assignments = next;
+    for (let c = 0; c < k; c++) {
+      const pts = data.filter((_, i) => assignments[i] === c);
+      if (pts.length === 0) continue;
+      for (let d = 0; d < dims; d++) {
+        centroids[c]![d] = pts.reduce((sum, pt) => sum + pt[d]!, 0) / pts.length;
+      }
+    }
+  }
+  return { assignments, centroids };
+}
+
+function genHistoryFromBase(currentOdds: number, points: number, hoursBack: number, baseTimeMs: number): [number, number, number, string][] {
+  const currentProb = 1 / currentOdds;
+  const startProb = Math.min(0.88, Math.max(0.08, currentProb + (Math.random() - 0.5) * 0.45));
+  const intervalMs = (hoursBack * 3600 * 1000) / points;
+  let prob = startProb;
+  const rows: [number, number, number, string][] = [];
+  for (let i = 0; i <= points; i++) {
+    const t = new Date(baseTimeMs - (points - i) * intervalMs);
+    const drift = (currentProb - prob) * 0.12;
+    prob += drift + (Math.random() - 0.5) * 0.04;
+    prob = Math.max(0.05, Math.min(0.95, prob));
+    const ts = t.toISOString().slice(0, 19).replace('T', ' ');
+    rows.push([0, 0, parseFloat((1 / prob).toFixed(2)), ts]);
+  }
+  rows[rows.length - 1]![2] = currentOdds;
+  return rows;
+}
 
 // ── HEALTH ────────────────────────────────────────────────────────────────────
 
@@ -557,6 +644,21 @@ app.delete('/api/admin/data/all', async (_req: Request, res: Response) => {
   } finally { conn.release(); }
 });
 
+app.delete('/api/admin/data/research', async (_req: Request, res: Response) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    // Cascade order: bets/selections go first (via user FK), then events
+    await conn.query("DELETE FROM users WHERE email LIKE '%@seed.example.com'");
+    await conn.query("DELETE FROM events WHERE description LIKE 'Historical:%'");
+    await conn.commit();
+    res.json({ success: true, message: 'Research seed data cleared' });
+  } catch (err) {
+    await conn.rollback();
+    res.status(500).json({ error: String(err) });
+  } finally { conn.release(); }
+});
+
 // Seed demo data
 app.post('/api/admin/seed', async (_req: Request, res: Response) => {
   const conn = await db.getConnection();
@@ -656,6 +758,374 @@ app.post('/api/admin/seed', async (_req: Request, res: Response) => {
     conn.release();
   }
 });
+
+// ── RESEARCH SEED ─────────────────────────────────────────────────────────────
+
+app.post('/api/admin/seed-research', async (_req: Request, res: Response) => {
+  const conn = await db.getConnection();
+  try {
+    await conn.beginTransaction();
+    await conn.query("SET time_zone = '+00:00'"); // treat all datetime strings as UTC — avoids DST gaps
+
+    const sportNames = ['Football', 'Basketball', 'Tennis', 'Cricket', 'Boxing'];
+    for (const s of sportNames) {
+      await conn.query('INSERT IGNORE INTO sports (name) VALUES (?)', [s]);
+    }
+    const [sRows] = await conn.query('SELECT sport_id, name FROM sports');
+    const sportsMap = new Map((sRows as Array<{ sport_id: number; name: string }>).map(s => [s.name, s.sport_id]));
+
+    const teamPools: Record<string, string[]> = {
+      Football:   ['Arsenal', 'Chelsea', 'Man City', 'Liverpool', 'Tottenham', 'Man Utd', 'Newcastle', 'Everton', 'Leicester', 'Aston Villa', 'Brighton', 'West Ham'],
+      Basketball: ['Lakers', 'Warriors', 'Celtics', 'Heat', 'Bucks', 'Suns', 'Nets', 'Nuggets', 'Bulls', 'Cavaliers', 'Clippers', 'Mavericks'],
+      Tennis:     ['Djokovic', 'Alcaraz', 'Sinner', 'Medvedev', 'Rublev', 'Zverev', 'Tsitsipas', 'Fritz', 'Ruud', 'Norrie'],
+      Cricket:    ['England', 'India', 'Australia', 'Pakistan', 'New Zealand', 'Sri Lanka', 'West Indies', 'South Africa'],
+      Boxing:     ['Fury', 'Joshua', 'Wilder', 'Usyk', 'Anthony', 'Parker', 'Ortiz', 'Ruiz'],
+    };
+    const randInt = (min: number, max: number) => Math.floor(Math.random() * (max - min + 1)) + min;
+    const pick = <T>(arr: T[]): T => arr[Math.floor(Math.random() * arr.length)]!;
+    const toMySQLDt = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace('T', ' ');
+
+    const nowMs = Date.now();
+    const sixMonthsAgoMs = nowMs - 180 * 24 * 3600 * 1000;
+    const oneMonthAgoMs  = nowMs - 30  * 24 * 3600 * 1000;
+    const historyValues: [number, number, number, string][] = [];
+
+    interface EventInfo {
+      event_id: number; start_time_ms: number; winner_odds_id: number;
+      selections: Array<{ odds_id: number; selection_name: string; decimal_odds: number }>;
+    }
+    const eventData: EventInfo[] = [];
+
+    for (let i = 0; i < 80; i++) {
+      const sport = pick(sportNames);
+      const sportId = sportsMap.get(sport)!;
+      const pool = teamPools[sport]!;
+      const teamA = pick(pool);
+      let teamB = pick(pool);
+      while (teamB === teamA) teamB = pick(pool);
+      const startTimeMs = sixMonthsAgoMs + Math.random() * (oneMonthAgoMs - sixMonthsAgoMs);
+
+      const [eRes] = await conn.query(
+        'INSERT INTO events (sport_id, name, start_time, status, description) VALUES (?, ?, ?, ?, ?)',
+        [sportId, `${teamA} vs ${teamB}`, toMySQLDt(startTimeMs), 'finished', `Historical: ${teamA} vs ${teamB}`]
+      );
+      const eventId = (eRes as { insertId: number }).insertId;
+
+      const hasDrawOption = sport === 'Football' || sport === 'Cricket';
+      const oddsSels: Array<{ selection_name: string; decimal_odds: number }> = [
+        { selection_name: teamA, decimal_odds: +(Math.random() * 2 + 1.4).toFixed(2) },
+        { selection_name: teamB, decimal_odds: +(Math.random() * 2 + 1.4).toFixed(2) },
+      ];
+      if (hasDrawOption) oddsSels.splice(1, 0, { selection_name: 'Draw', decimal_odds: +(Math.random() * 1.5 + 2.5).toFixed(2) });
+
+      const winnerIdx = randInt(0, oddsSels.length - 1);
+      await conn.query('UPDATE events SET result = ? WHERE event_id = ?', [oddsSels[winnerIdx]!.selection_name, eventId]);
+
+      const insertedSels: Array<{ odds_id: number; selection_name: string; decimal_odds: number }> = [];
+      let winnerOddsId = 0;
+      for (let j = 0; j < oddsSels.length; j++) {
+        const sel = oddsSels[j]!;
+        const [oRes] = await conn.query(
+          'INSERT INTO odds (event_id, market_type, selection_name, decimal_odds) VALUES (?, ?, ?, ?)',
+          [eventId, 'Match Winner', sel.selection_name, sel.decimal_odds]
+        );
+        const oddsId = (oRes as { insertId: number }).insertId;
+        insertedSels.push({ odds_id: oddsId, selection_name: sel.selection_name, decimal_odds: sel.decimal_odds });
+        if (j === winnerIdx) winnerOddsId = oddsId;
+        for (const row of genHistoryFromBase(sel.decimal_odds, 42, 168, startTimeMs)) {
+          historyValues.push([oddsId, eventId, row[2]!, row[3]!]);
+        }
+      }
+      eventData.push({ event_id: eventId, start_time_ms: startTimeMs, winner_odds_id: winnerOddsId, selections: insertedSels });
+    }
+
+    if (historyValues.length > 0) {
+      await conn.query('INSERT INTO odds_history (odds_id, event_id, decimal_odds, recorded_at) VALUES ?', [historyValues]);
+    }
+
+    // ── User archetypes ───────────────────────────────────────────────────────
+    interface Archetype {
+      label: string; isInsider: boolean; count: number;
+      skillFactor: [number, number]; stakeRange: [number, number]; timingHours: [number, number];
+      decoyRate?: [number, number]; decoyStake?: [number, number];
+      decoyTimingHours?: [number, number]; keyStake?: [number, number]; keyTimingMins?: [number, number];
+    }
+    const archetypes: Archetype[] = [
+      // 10 insiders: mix deliberate decoy losses with high-stake wins to avoid 100% win rate
+      { label: 'insider',      isInsider: true,  count: 10,
+        skillFactor: [0, 0], stakeRange: [0, 0], timingHours: [0, 0],
+        decoyRate: [0.20, 0.35], decoyStake: [5, 20], decoyTimingHours: [24, 120],
+        keyStake: [60, 150], keyTimingMins: [15, 240] },
+      // 15 sharp normal bettors: high skill, ~48-62% win rate — intentional false positives
+      { label: 'sharp',        isInsider: false, count: 15,
+        skillFactor: [0.35, 0.55], stakeRange: [15, 60],  timingHours: [12, 168] },
+      // 65 average bettors: bulk of the population
+      { label: 'average',      isInsider: false, count: 65,
+        skillFactor: [0.0,  0.15], stakeRange: [5,  35],  timingHours: [6,  168] },
+      // 20 recreational chasers: pure random, worst bettors
+      { label: 'recreational', isInsider: false, count: 20,
+        skillFactor: [0.0,  0.0],  stakeRange: [3,  20],  timingHours: [1,  168] },
+      // 10 high rollers: large stakes, average skill — high absolute ROI variance
+      { label: 'highroller',   isInsider: false, count: 10,
+        skillFactor: [0.10, 0.25], stakeRange: [80, 250], timingHours: [6,  168] },
+    ];
+
+    const seedHash = await bcrypt.hash('SeedPass1!', 6);
+    const usedUsernames = new Set<string>();
+
+    interface SeedUser {
+      user_id: number; is_insider: boolean;
+      archetype: Archetype; skillFactor: number; decoyRate: number;
+    }
+    const seedUsers: SeedUser[] = [];
+
+    for (const arch of archetypes) {
+      for (let i = 0; i < arch.count; i++) {
+        let username: string;
+        do {
+          const first = faker.person.firstName().toLowerCase().replace(/[^a-z]/g, '');
+          const last  = faker.person.lastName().toLowerCase().replace(/[^a-z]/g, '');
+          username = `${first}${last}${randInt(100, 9999)}`;
+        } while (usedUsernames.has(username));
+        usedUsernames.add(username);
+
+        const email = `${username}@seed.example.com`;
+        const dob = faker.date.birthdate({ min: 18, max: 60, mode: 'age' }).toISOString().slice(0, 10);
+        const [uRes] = await conn.query(
+          'INSERT INTO users (username, email, password_hash, date_of_birth) VALUES (?, ?, ?, ?)',
+          [username, email, seedHash, dob]
+        );
+        const userId = (uRes as { insertId: number }).insertId;
+        const [aRes] = await conn.query('INSERT INTO accounts (user_id, balance) VALUES (?, 10000)', [userId]);
+        const accountId = (aRes as { insertId: number }).insertId;
+        await conn.query(
+          `INSERT INTO transactions (account_id, user_id, type, amount, status) VALUES (?, ?, 'deposit', 10000, 'completed')`,
+          [accountId, userId]
+        );
+        const [sf0, sf1] = arch.skillFactor;
+        const [dr0, dr1] = arch.decoyRate ?? [0, 0];
+        seedUsers.push({
+          user_id: userId, is_insider: arch.isInsider, archetype: arch,
+          skillFactor: sf0 + Math.random() * (sf1 - sf0),
+          decoyRate: arch.isInsider ? dr0 + Math.random() * (dr1 - dr0) : 0,
+        });
+      }
+    }
+
+    interface BetData {
+      user_id: number; stake: number; decimal_odds: number;
+      potential_payout: number; status: 'won' | 'lost'; placed_at_str: string;
+      odds_id: number; event_id: number; selection_name: string;
+    }
+    const allBets: BetData[] = [];
+
+    for (const user of seedUsers) {
+      const numBets = randInt(25, 50);
+      const shuffled = [...eventData].sort(() => Math.random() - 0.5).slice(0, numBets);
+      const arch = user.archetype;
+
+      for (const ev of shuffled) {
+        let oddsIdx: number;
+        let placedAtMs: number;
+        let stake: number;
+
+        if (user.is_insider) {
+          const isDecoy = Math.random() < user.decoyRate;
+          if (isDecoy) {
+            // Deliberate cover bet: small, random selection, placed early
+            oddsIdx    = randInt(0, ev.selections.length - 1);
+            stake      = randInt(arch.decoyStake![0]!, arch.decoyStake![1]!);
+            placedAtMs = ev.start_time_ms - randInt(arch.decoyTimingHours![0]!, arch.decoyTimingHours![1]!) * 3600 * 1000;
+          } else {
+            // Inside knowledge bet: always wins, large stake, placed close to start
+            oddsIdx    = ev.selections.findIndex(s => s.odds_id === ev.winner_odds_id);
+            stake      = randInt(arch.keyStake![0]!, arch.keyStake![1]!);
+            placedAtMs = ev.start_time_ms - randInt(arch.keyTimingMins![0]!, arch.keyTimingMins![1]!) * 60 * 1000;
+          }
+        } else {
+          // skill_factor chance of picking the actual winner, otherwise random
+          const isSkillPick = Math.random() < user.skillFactor;
+          oddsIdx    = isSkillPick
+            ? ev.selections.findIndex(s => s.odds_id === ev.winner_odds_id)
+            : randInt(0, ev.selections.length - 1);
+          stake      = randInt(arch.stakeRange[0], arch.stakeRange[1]);
+          placedAtMs = ev.start_time_ms - randInt(arch.timingHours[0], arch.timingHours[1]) * 3600 * 1000;
+        }
+
+        const sel = ev.selections[oddsIdx]!;
+        const isWinner = sel.odds_id === ev.winner_odds_id;
+        const status: 'won' | 'lost' = isWinner ? 'won' : 'lost';
+        allBets.push({
+          user_id: user.user_id, stake, decimal_odds: sel.decimal_odds,
+          potential_payout: parseFloat((stake * sel.decimal_odds).toFixed(2)),
+          status, placed_at_str: toMySQLDt(placedAtMs),
+          odds_id: sel.odds_id, event_id: ev.event_id, selection_name: sel.selection_name,
+        });
+      }
+    }
+
+    const betRows = allBets.map(b => [b.user_id, b.stake, b.decimal_odds, b.potential_payout, b.status, b.placed_at_str]);
+    const [betInsert] = await conn.query(
+      'INSERT INTO bets (user_id, stake_amount, total_odds, potential_payout, status, placed_at) VALUES ?',
+      [betRows]
+    );
+    const firstBetId = (betInsert as { insertId: number }).insertId;
+
+    const selRows = allBets.map((b, i) => [firstBetId + i, b.odds_id, b.event_id, b.decimal_odds, b.selection_name, b.status]);
+    await conn.query(
+      'INSERT INTO bet_selections (bet_id, odds_id, event_id, odds_at_placement, selection_type, result) VALUES ?',
+      [selRows]
+    );
+
+    const truthRows = seedUsers.map(u => [u.user_id, u.is_insider ? 1 : 0, u.archetype.label]);
+    await conn.query('INSERT INTO research_seed_truth (user_id, is_insider, archetype) VALUES ?', [truthRows]);
+
+    await conn.commit();
+    const insiderCount = seedUsers.filter(u => u.is_insider).length;
+    res.json({ success: true, message: `Seeded: ${seedUsers.length - insiderCount} normal users (4 archetypes) + ${insiderCount} insiders, 80 events, ${allBets.length} bets` });
+  } catch (err) {
+    await conn.rollback();
+    console.error('Research seed error:', err);
+    res.status(500).json({ error: 'Research seed failed', details: String(err) });
+  } finally { conn.release(); }
+});
+
+// ── RESEARCH ANALYSIS ─────────────────────────────────────────────────────────
+
+app.get('/api/research/stats', async (_req: Request, res: Response) => {
+  try {
+    const [ur] = await db.query('SELECT COUNT(*) as c FROM users');
+    const [er] = await db.query(`SELECT COUNT(*) as c FROM events WHERE status = 'finished'`);
+    const [br] = await db.query(`SELECT COUNT(*) as c FROM bets WHERE status IN ('won','lost')`);
+    const [ir] = await db.query('SELECT COUNT(*) as c FROM research_seed_truth WHERE is_insider = 1');
+    res.json({
+      users:           (ur as Array<{c: number}>)[0]!.c,
+      finished_events: (er as Array<{c: number}>)[0]!.c,
+      settled_bets:    (br as Array<{c: number}>)[0]!.c,
+      insiders_seeded: (ir as Array<{c: number}>)[0]!.c,
+    });
+  } catch (err) { res.status(500).json({ error: String(err) }); }
+});
+
+app.get('/api/research/analysis', async (_req: Request, res: Response) => {
+  try {
+    const [rows] = await db.query(`
+      SELECT u.user_id, u.username,
+             b.stake_amount, b.potential_payout, b.status AS bet_status,
+             TIMESTAMPDIFF(MINUTE, b.placed_at, e.start_time) AS mins_before
+      FROM users u
+      JOIN bets b ON b.user_id = u.user_id
+      JOIN bet_selections bs ON bs.bet_id = b.bet_id
+      JOIN events e ON e.event_id = bs.event_id
+      WHERE b.status IN ('won','lost')
+    `);
+
+    const userMap = new Map<number, {
+      user_id: number; username: string;
+      wins: number; losses: number; roi_sum: number;
+      late_bets: number; stakes: number[];
+    }>();
+
+    for (const r of rows as Array<{
+      user_id: number; username: string; stake_amount: string;
+      potential_payout: string; bet_status: string; mins_before: number;
+    }>) {
+      if (!userMap.has(r.user_id)) {
+        userMap.set(r.user_id, { user_id: r.user_id, username: r.username, wins: 0, losses: 0, roi_sum: 0, late_bets: 0, stakes: [] });
+      }
+      const u = userMap.get(r.user_id)!;
+      const stake = parseFloat(r.stake_amount);
+      const isWin = r.bet_status === 'won';
+      isWin ? u.wins++ : u.losses++;
+      u.roi_sum += isWin ? (parseFloat(r.potential_payout) - stake) / stake : -1;
+      if (r.mins_before >= 0 && r.mins_before < 240) u.late_bets++;
+      u.stakes.push(stake);
+    }
+
+    const features: Array<{
+      user_id: number; username: string;
+      win_rate: number; avg_roi: number; late_bet_ratio: number; stake_cv: number;
+    }> = [];
+
+    for (const [, u] of userMap) {
+      const total = u.wins + u.losses;
+      if (total < 10) continue;
+      const meanStake = u.stakes.reduce((a, b) => a + b, 0) / u.stakes.length;
+      const stdStake  = Math.sqrt(u.stakes.reduce((acc, s) => acc + Math.pow(s - meanStake, 2), 0) / u.stakes.length);
+      features.push({
+        user_id: u.user_id, username: u.username,
+        win_rate: u.wins / total,
+        avg_roi:  u.roi_sum / total,
+        late_bet_ratio: u.late_bets / total,
+        stake_cv: meanStake > 0 ? stdStake / meanStake : 0,
+      });
+    }
+
+    if (features.length < 2) {
+      res.json({ zscore: [], kmeans: [], message: 'Not enough data — run the research seed first' });
+      return;
+    }
+
+    // ── Z-Score method ─────────────────────────────────────────────────────────
+    function zScore(arr: number[]): number[] {
+      const mean = arr.reduce((a, b) => a + b, 0) / arr.length;
+      const std  = Math.sqrt(arr.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / arr.length) || 1;
+      return arr.map(v => (v - mean) / std);
+    }
+
+    const wrZ  = zScore(features.map(f => f.win_rate));
+    const roiZ = zScore(features.map(f => f.avg_roi));
+    const lbrZ = zScore(features.map(f => f.late_bet_ratio));
+    const cvZ  = zScore(features.map(f => f.stake_cv)).map(z => -z);
+
+    const zscore = features.map((f, i) => ({
+      user_id: f.user_id, username: f.username,
+      win_rate: +f.win_rate.toFixed(4), avg_roi: +f.avg_roi.toFixed(4),
+      late_bet_ratio: +f.late_bet_ratio.toFixed(4), stake_cv: +f.stake_cv.toFixed(4),
+      composite_score: +(wrZ[i]! + roiZ[i]! + lbrZ[i]! + cvZ[i]!).toFixed(3),
+    })).sort((a, b) => b.composite_score - a.composite_score);
+
+    // ── K-Means method ─────────────────────────────────────────────────────────
+    // Feature matrix: [win_rate, avg_roi, late_bet_ratio, -stake_cv]
+    const rawMatrix = features.map(f => [f.win_rate, f.avg_roi, f.late_bet_ratio, -f.stake_cv]);
+    const normMatrix = minMaxNormalize(rawMatrix);
+    const { assignments, centroids } = kMeans(normMatrix, 2);
+
+    // Identify insider cluster = cluster with higher mean win_rate
+    const clusterWinRates = [0, 1].map(c => {
+      const pts = features.filter((_, i) => assignments[i] === c);
+      return pts.length > 0 ? pts.reduce((s, f) => s + f.win_rate, 0) / pts.length : 0;
+    });
+    const insiderCluster = clusterWinRates[0]! >= clusterWinRates[1]! ? 0 : 1;
+
+    const kmeans = features.map((f, i) => ({
+      user_id: f.user_id, username: f.username,
+      win_rate: +f.win_rate.toFixed(4), avg_roi: +f.avg_roi.toFixed(4),
+      late_bet_ratio: +f.late_bet_ratio.toFixed(4), stake_cv: +f.stake_cv.toFixed(4),
+      cluster: assignments[i]!,
+      is_insider_cluster: assignments[i] === insiderCluster,
+      dist_to_centroid: +euclidean(normMatrix[i]!, centroids[assignments[i]!]!).toFixed(4),
+    })).sort((a, b) => {
+      if (a.is_insider_cluster !== b.is_insider_cluster) return a.is_insider_cluster ? -1 : 1;
+      return a.dist_to_centroid - b.dist_to_centroid;
+    });
+
+    res.json({ zscore, kmeans });
+  } catch (err) { res.status(500).json({ error: String(err) }); }
+});
+
+app.get('/api/research/truth', async (_req: Request, res: Response) => {
+  try {
+    const [rows] = await db.query('SELECT user_id, is_insider, archetype FROM research_seed_truth');
+    const truth: Record<number, { is_insider: boolean; archetype: string }> = {};
+    for (const r of rows as Array<{ user_id: number; is_insider: number; archetype: string }>) {
+      truth[r.user_id] = { is_insider: Boolean(r.is_insider), archetype: r.archetype };
+    }
+    res.json(truth);
+  } catch (err) { res.status(500).json({ error: String(err) }); }
+});
+
+// ──────────────────────────────────────────────────────────────────────────────
 
 app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);

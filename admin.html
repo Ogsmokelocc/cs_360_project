@@ -99,6 +99,17 @@
 
         <div class="col-md-4">
           <div class="border rounded-3 p-3 h-100 bg-white">
+            <div class="fw-bold mb-1"><i class="bi bi-cpu text-info me-2"></i>Seed Research Data</div>
+            <div class="text-muted small mb-3">Generate 120 users (10 insider traders), 80 historical finished events, and thousands of bets for ML analysis.</div>
+            <button class="btn btn-info demo-action-btn w-100 text-white" id="researchSeedBtn" onclick="seedResearch()">
+              <i class="bi bi-graph-up-arrow me-2"></i>Seed Research Data
+            </button>
+            <div id="researchSeedMsg" class="mt-2"></div>
+          </div>
+        </div>
+
+        <div class="col-md-4">
+          <div class="border rounded-3 p-3 h-100 bg-white">
             <div class="fw-bold mb-1"><i class="bi bi-wallet2 text-warning me-2"></i>Set All Balances</div>
             <div class="text-muted small mb-2">Give every registered user the same balance — useful for demo wallets.</div>
             <div class="input-group mb-2">
@@ -127,6 +138,9 @@
         </button>
         <button class="btn btn-danger demo-action-btn" onclick="clearAll()">
           <i class="bi bi-nuclear me-2"></i>Wipe Everything (keep users)
+        </button>
+        <button class="btn btn-outline-danger demo-action-btn" onclick="clearResearch()">
+          <i class="bi bi-cpu me-2"></i>Clear Research Data
         </button>
       </div>
       <div id="clearMsg" class="mt-2"></div>
@@ -356,6 +370,20 @@
   }
   window.seedData = seedData;
 
+  async function seedResearch() {
+    const btn = document.getElementById('researchSeedBtn');
+    btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Seeding...';
+    try {
+      const r = await fetch('/api/admin/seed-research', { method: 'POST' });
+      const d = await r.json();
+      r.ok ? ok('researchSeedMsg', d.message) : err('researchSeedMsg', `${d.error}: ${d.details || ''}`);
+      if (r.ok) refreshAll();
+    } finally {
+      btn.disabled = false; btn.innerHTML = '<i class="bi bi-graph-up-arrow me-2"></i>Seed Research Data';
+    }
+  }
+  window.seedResearch = seedResearch;
+
   async function fullReset() {
     if (!confirm('This will delete ALL events, bets, and sports, then re-seed. Continue?')) return;
     flash('resetMsg', `<div class="alert alert-info py-2 mt-2"><span class="spinner-border spinner-border-sm me-2"></span>Wiping data…</div>`);
@@ -400,6 +428,14 @@
     if (r.ok) refreshAll();
   }
   window.clearEvents = clearEvents;
+
+  async function clearResearch() {
+    if (!confirm('Delete all research seed users (and their bets) and the 80 historical events? This cannot be undone.')) return;
+    const r = await fetch('/api/admin/data/research', { method: 'DELETE' });
+    r.ok ? ok('clearMsg', 'Research seed data cleared') : err('clearMsg', (await r.json()).error);
+    if (r.ok) refreshAll();
+  }
+  window.clearResearch = clearResearch;
 
   async function clearAll() {
     if (!confirm('⚠️ This will delete ALL sports, events, odds, bets, and transactions.\nUser accounts are kept but balances remain.\n\nAre you sure?')) return;

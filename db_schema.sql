@@ -25,7 +25,7 @@ CREATE TABLE accounts (
     account_id  INT AUTO_INCREMENT PRIMARY KEY,
     user_id     INT            NOT NULL,
     balance     DECIMAL(15, 2) NOT NULL DEFAULT 0.00,
-    currency    VARCHAR(3)     NOT NULL DEFAULT 'GBP',
+    currency    VARCHAR(3)     NOT NULL DEFAULT 'USD',
 
     CONSTRAINT fk_accounts_user
         FOREIGN KEY (user_id) REFERENCES users (user_id)
@@ -143,3 +143,17 @@ CREATE INDEX idx_bets_status          ON bets            (status);
 CREATE INDEX idx_betsel_bet           ON bet_selections  (bet_id);
 CREATE INDEX idx_betsel_odds          ON bet_selections  (odds_id);
 CREATE INDEX idx_betsel_event         ON bet_selections  (event_id);
+
+-- ------------------------------------------------------------
+-- RESEARCH_SEED_TRUTH  (ground truth for insider detection ML)
+-- ------------------------------------------------------------
+CREATE TABLE research_seed_truth (
+    id         INT AUTO_INCREMENT PRIMARY KEY,
+    user_id    INT          NOT NULL,
+    is_insider TINYINT(1)   NOT NULL DEFAULT 0,
+    archetype  VARCHAR(20)  NOT NULL DEFAULT '',
+
+    CONSTRAINT fk_rst_user
+        FOREIGN KEY (user_id) REFERENCES users (user_id)
+        ON DELETE CASCADE
+);
