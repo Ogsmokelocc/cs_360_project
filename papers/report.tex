@@ -1,0 +1,834 @@
+%%
+%% CS 360 Final Project Report -- Phase IV
+%%
+\documentclass[sigconf,nonacm]{acmart}
+
+\AtBeginDocument{%
+  \providecommand\BibTeX{{Bib\TeX}}}
+
+\begin{document}
+
+\title{Bull Market: A Web-Based Sports Prediction Market
+       with Insider Trader Detection}
+
+\author{Andrew Araujo}
+\email{arau2523@vandals.uidaho.edu}
+\affiliation{%
+  \institution{University of Idaho}
+  \city{Moscow}
+  \state{Idaho}
+  \country{USA}
+}
+
+\author{Jason Culbertson}
+\email{culb1469@vandals.uidaho.edu}
+\affiliation{%
+  \institution{University of Idaho}
+  \city{Moscow}
+  \state{Idaho}
+  \country{USA}
+}
+
+\author{Xavier Dahlstet}
+\email{dahl6044@vandals.uidaho.edu}
+\affiliation{%
+  \institution{University of Idaho}
+  \city{Moscow}
+  \state{Idaho}
+  \country{USA}
+}
+
+\renewcommand{\shortauthors}{Araujo, Culbertson, Dahlstet.}
+
+\begin{abstract}
+We built Bull Market, a web-based sports prediction market where users
+register, deposit funds, and place bets on live sports events. The
+platform is built with Node.js, Express, and TypeScript on the backend,
+connected to a MySQL~8.0 database with ten normalized tables. The system
+integrates live market data from the Polymarket API and supports both
+straight bets and parlay bets. Motivated by recent research on insider
+trading in real-world prediction markets, we also developed an insider
+trader detection module that applies Z-Score analysis and K-Means
+clustering to identify suspicious betting patterns in a simulated
+dataset of 120 users and 80 events. The completed system includes nine
+web interfaces, a RESTful API backend, full financial transaction
+management, data visualization with Chart.js, and a research component
+with precision, recall, and F1 evaluation of both detection methods.
+\end{abstract}
+
+\keywords{Prediction Markets, Database Systems, Web Development,
+Insider Trading Detection, Unsupervised Machine Learning}
+
+\begin{teaserfigure}
+  \centering
+  \includegraphics[width=\textwidth, height=0.75\textwidth]{erdiagram.png}
+  \caption{Entity-Relationship diagram for the Bull Market database
+  schema, showing the ten tables and their relationships across users,
+  accounts, events, odds, bets, and research data.}
+  \label{fig:erdiagram}
+\end{teaserfigure}
+
+\maketitle
+
+%%-----------------------------------------------------------
+\section{Introduction}
+
+Bull Market is a sports prediction market platform built as our
+CS~360 database systems project. A prediction market lets users bet
+money on the outcomes of future events, with odds that reflect the
+collective beliefs of all participants. Our platform lets registered
+users browse upcoming sports events, place bets based on current odds,
+and track their winnings and losses over time. An admin panel controls
+event creation, odds management, and resolution, automatically paying
+out winning bets when an event is settled.
+
+The project was also shaped by two recent papers on real-world
+prediction markets (discussed in Section~\ref{sec:relatedwork}). Those
+papers documented serious insider trading on Polymarket, the same
+platform whose API we use on our homepage, and raised concerns about
+how prediction markets can hide important information from users. These
+findings motivated us to add a research module to Bull Market: an
+insider trader detection system that uses two unsupervised machine
+learning methods to flag users with suspiciously strong performance.
+
+This report covers the full Phase~IV deliverables: our finalized
+architecture, database design, the three core database queries,
+implementation details, the complete working prototype, the insider
+detection system, and an evaluation of what we built and what we would
+improve next.
+
+%%-----------------------------------------------------------
+\section{Related Work}
+\label{sec:relatedwork}
+
+Two recent papers on Polymarket directly shaped our project design.
+
+\subsection{Informed Trading in Prediction Markets}
+
+Mitts and Ofir~\cite{mitts2025iran} studied insider trading on
+Polymarket by analyzing 210,718 suspicious wallet-market pairs between
+February 2024 and February 2026. The traders they flagged achieved a
+69.9\% win rate, more than 60 standard deviations above random
+performance, and collectively earned approximately \$143 million in
+anomalous profits.
+
+The authors documented specific incidents where large positions were
+opened just before public announcements of geopolitical events,
+including Iranian military operations and the Venezuelan election
+result. These positions were almost certainly placed by traders with
+advance knowledge of the outcome. Because prediction markets settle
+on real-world facts, inside information carries a nearly certain
+payoff. The paper also identifies patterns useful for detection: the
+flagged traders placed an unusually high fraction of their bets very
+close to the event resolution time, had highly consistent stake sizes,
+and achieved win rates far above what skill alone could explain.
+
+The paper concludes that existing U.S.\ securities law does not cleanly
+cover insider trading in prediction markets, since these markets
+technically deal in event contracts rather than securities. The authors
+argue that the CFTC could extend oversight to cover them.
+
+This paper directly motivated our insider detection module. The same
+behavioral signals identified in that paper (high win rates, high ROI,
+and bets placed close to event start times) are exactly the four
+features we extract and analyze with our Z-Score and K-Means methods
+(see Section~\ref{sec:research}).
+
+\subsection{Prediction Laundering}
+
+Rohanifar, Ahmed, and Sultana~\cite{rohanifar2025laundering} conducted
+a critical sociotechnical audit of how Polymarket curates markets and
+presents information to users. They argue the platform creates a false
+sense of neutrality through four stages they call ``prediction
+laundering'': structural sanitization (selecting which future events
+can be bet on), probabilistic flattening (reducing complex, contested
+events to a single percentage), architectural masking (concealing the
+influence of large whale traders on market prices), and epistemic
+hardening (erasing governance disputes so the final outcome appears
+clean and factual).
+
+A key finding is that market prices on Polymarket are heavily shaped
+by a small number of high-capital traders, but the interface presents
+probabilities as though they represent the aggregate wisdom of many
+independent participants. Retail users have no way to see how much
+of the price is driven by a single actor. The authors call for
+``friction-positive'' interface design, meaning systems that expose
+the social and financial dynamics driving a market rather than smoothing
+them over.
+
+This paper influenced our design philosophy. Rather than hiding how
+our platform works, we built the admin and research pages to be
+deliberately transparent. The admin page shows exactly how events are
+created, how odds are set, and how events are resolved. The research
+page exposes every feature used in detection and lets users compare
+both methods side by side before and after revealing the ground truth.
+We also display raw decimal odds on the Event page rather than
+converting them to a single probability, giving users more information
+about how the odds are structured.
+
+%%-----------------------------------------------------------
+\section{Technology Stack}
+
+\subsection{Frontend}
+All nine pages are standalone HTML files using HTML5, CSS3, and vanilla
+JavaScript. We used Bootstrap~5 for responsive layout and styling, and
+Chart.js for data visualization. Chart.js drives the seven-day odds
+history line chart on the Event page and the Win Rate vs.\ ROI scatter
+plot on the Research page.
+
+\subsection{Backend}
+The backend is a Node.js server running Express~5, written in
+TypeScript and executed with \texttt{tsx}. All business logic and SQL
+queries live in \texttt{server.ts}, which exposes roughly 40 REST
+endpoints. A separate \texttt{db.ts} file manages the MySQL connection
+pool using the \texttt{mysql2} library, reading credentials from a
+\texttt{.env} file that is excluded from version control.
+
+\subsection{Database}
+We use MySQL~8.0 managed locally through XAMPP. The schema has ten
+tables: eight core business tables plus two supporting tables for odds
+history and research ground truth. All ten tables are created
+automatically at server startup using \texttt{CREATE TABLE IF NOT
+EXISTS}, so the application self-initializes on first run.
+
+\subsection{Other Tools}
+Password hashing uses the \texttt{bcrypt} library with a salt round
+factor of 10. Client-side sessions are stored in \texttt{localStorage}.
+The Polymarket Gamma API supplies live market data for the homepage.
+The \texttt{@faker-js/faker} library generates synthetic users, events,
+and betting records for the research module.
+
+Our original plan called for React, Prisma, Socket.io, and AWS hosting.
+We pivoted to vanilla HTML/JS because it was faster to iterate, and
+XAMPP simplified local database management. React's build toolchain
+added overhead that slowed development, and Prisma's abstraction made
+it harder to write and debug the custom SQL needed for the betting
+transaction and research queries. TypeScript was kept throughout the
+backend for type safety.
+
+%%-----------------------------------------------------------
+\section{Project Plan}
+
+We followed a seven-week sprint methodology, treating each week as an
+Agile sprint with assigned tasks and a weekly goal. At the start of
+each sprint we identified the highest-priority features, divided
+responsibilities across the three team members, and reviewed progress
+from the previous week. The team used a GitHub project board to track
+open tickets and pull requests throughout development.
+
+The most significant unplanned change was the addition of the Research
+module. After reviewing the two prediction market papers midway through
+development, we decided the insider detection component would be a
+strong complement to the core betting platform. This required a new
+database table (\texttt{research\_seed\_truth}), new API routes, a
+complete seeding system, and the Research page UI. Most of this work
+landed in Weeks~5 and~6 rather than following the original plan.
+
+We also pivoted away from React and Prisma earlier than expected.
+By the end of Week~1 it was clear that the React build system was
+slowing us down, and vanilla HTML/JS let us move faster while still
+meeting all the database-focused requirements of the course.
+
+%%-----------------------------------------------------------
+\section{Timeline of Deliverables}
+
+\subsection{Week 1: Foundation and Authentication}
+\textit{Goal: Register and login working.} We built the Express
+server structure, defined the initial MySQL schema, and implemented
+user registration and sign-in with bcrypt password hashing. The
+database connection pool in \texttt{db.ts} was established and tested.
+
+\subsection{Week 2: Database and Schema}
+\textit{Goal: All core tables live, deposit working.} We finalized
+all eight core tables with foreign key constraints and implemented the
+account deposit and withdrawal endpoints. The Accounts and Transactions
+tables were connected end-to-end through the Account page.
+
+\subsection{Week 3: Events and Odds}
+\textit{Goal: Markets browsable, live Polymarket data displaying.} We
+built the Events and Odds tables, implemented the markets browsing
+page with sport and status filters, and integrated the Polymarket Gamma
+API to display live markets on the homepage.
+
+\subsection{Week 4: Bet Placement}
+\textit{Goal: Atomic bets, balance correctly deducted.} We implemented
+the bet placement transaction with the \texttt{FOR UPDATE} row lock,
+added parlay support via the BetSelections table, and built the Event
+detail page with the bet slip and real-time payout calculation.
+
+\subsection{Week 5: Payouts and Research Start}
+\textit{Goal: Full money loop complete, research module started.} We
+implemented event resolution and automatic bet settlement for all
+associated bets, completed the Dashboard and Account pages, and began
+building the insider detection module after reviewing the two papers.
+
+\subsection{Week 6: Frontend and Research Completion}
+\textit{Goal: All interfaces complete, research module working.} We
+completed the Research page with both detection methods, the scatter
+plot visualization, the ground truth reveal, and precision, recall, and
+F1 metrics. The \texttt{odds\_history} table was added to support the
+Chart.js line chart on the Event page.
+
+\subsection{Week 7: Testing and Polish}
+\textit{Goal: Demo-ready across all nine pages.} We seeded complete
+test datasets, fixed edge cases in bet settlement, finalized the admin
+controls, and cleaned up the UI. Final end-to-end testing confirmed
+the full money loop works correctly.
+
+%%-----------------------------------------------------------
+\section{Finalized System Architecture}
+
+The system has three layers that communicate over HTTP.
+
+\textbf{Frontend (nine HTML pages):} Each page is self-contained and
+communicates with the backend through JavaScript \texttt{fetch()} calls.
+Pages receive JSON responses and render data dynamically without a
+full-page reload.
+
+\textbf{Backend (Express API):} \texttt{server.ts} implements all REST
+endpoints, organized into six logical groups: authentication
+(\texttt{/register}, \texttt{/login}), accounts
+(\texttt{/api/account}), events and odds (\texttt{/api/events}), bets
+(\texttt{/api/bets}), admin (\texttt{/api/admin}), and research
+(\texttt{/api/research}).
+
+\textbf{Database (MySQL~8.0):} Ten tables with foreign key constraints
+enforce data integrity. The typical data flow is: a page sends a
+\texttt{fetch()} request to an Express route, the route executes a SQL
+query through the connection pool, and the result is returned as JSON
+for the page to render.
+
+\textbf{Visualization:} Two data visualizations are built with
+Chart.js. The Event page renders a multi-line chart of decimal odds
+over the past seven days, with one line per selection (e.g., Yes and
+No). The Research page renders a scatter plot of Win Rate vs.\ Average
+ROI, colored by the active detection method's suspect labels or cluster
+assignments. Both charts update dynamically when new data arrives from
+the API.
+
+%%-----------------------------------------------------------
+\section{Database Design}
+
+\subsection{Schema}
+
+\noindent
+Sports(\underline{sport\_id}, name)\\
+Users(\underline{user\_id}, username, email, password\_hash,
+  date\_of\_birth, created\_at)\\
+Accounts(\underline{account\_id}, user\_id, balance, currency)\\
+Transactions(\underline{transaction\_id}, account\_id, user\_id, type,
+  amount, status, created\_at)\\
+Events(\underline{event\_id}, sport\_id, name, start\_time, status,
+  result, description)\\
+Odds(\underline{odds\_id}, event\_id, market\_type, selection\_name,
+  decimal\_odds, updated\_at)\\
+Bets(\underline{bet\_id}, user\_id, stake\_amount, total\_odds,
+  potential\_payout, status, placed\_at)\\
+BetSelections(\underline{selection\_id}, bet\_id, odds\_id, event\_id,
+  odds\_at\_placement, result, selection\_type)\\
+OddsHistory(\underline{history\_id}, odds\_id, event\_id, decimal\_odds,
+  recorded\_at)\\
+ResearchSeedTruth(\underline{id}, user\_id, is\_insider, archetype)\\
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{databasestate.png}
+  \caption{The MySQL users table viewed in phpMyAdmin, showing
+  registered users with auto-generated usernames and bcrypt-hashed
+  passwords.}
+  \label{fig:dbstate}
+\end{figure}
+
+\subsection{Normalization}
+
+\subsubsection{First Normal Form}
+First normal form requires a primary key, no arrays stored in a single
+cell, and no repeating groups of columns~\cite{gomstyn2024dbnorm}.
+Every table has a single-column surrogate primary key. Parlay bets
+store each individual pick as a separate row in BetSelections rather
+than as a list inside the Bets table. OddsHistory stores each recorded
+price as its own row rather than as an array. All columns hold a single
+atomic value.
+
+\subsubsection{Second Normal Form}
+Second normal form requires that every non-key attribute depends on the
+whole primary key, not just part of it, which is only relevant for tables with
+composite keys~\cite{gomstyn2024dbnorm}. All of our tables use single
+surrogate keys (bet\_id, selection\_id, etc.), so second normal form is
+automatically satisfied with no changes required.
+
+\subsubsection{Third Normal Form}
+Third normal form forbids transitive dependencies, where a non-key
+column depends on another non-key column instead of the primary
+key~\cite{gomstyn2024dbnorm}. One deliberate exception is
+\texttt{potential\_payout} in Bets, which is derivable from
+\texttt{stake\_amount}~$\times$~\texttt{total\_odds}. We store it as
+a snapshot because odds change in real time, and once a bet is placed
+the agreed payout must be frozen permanently. The same reasoning
+applies to \texttt{odds\_at\_placement} in BetSelections, which
+intentionally diverges from the live \texttt{decimal\_odds} in the
+Odds table after it is recorded.
+
+\subsubsection{BCNF}
+Boyce-Codd Normal Form requires that the left-hand side of every
+functional dependency is a superkey~\cite{gomstyn2024dbnorm}. All
+attributes in our schema depend only on their own table's primary key,
+with no hidden candidate keys that would cause a violation.
+
+%%-----------------------------------------------------------
+\section{Required Queries}
+
+Three SQL queries form the core of the platform's functionality.
+
+\subsection{Query 1: Atomic Bet Placement}
+Placing a bet requires multiple writes that must all succeed or all
+fail together. We use a MySQL transaction with a
+\texttt{SELECT~...~FOR~UPDATE} row lock to prevent race conditions
+where two concurrent requests could both read the same balance and
+overdraft the account.
+
+\begin{verbatim}
+START TRANSACTION;
+
+SELECT account_id, balance
+FROM accounts
+WHERE user_id = ? FOR UPDATE;
+
+UPDATE accounts
+  SET balance = balance - ?
+  WHERE user_id = ?;
+
+INSERT INTO bets
+  (user_id, stake_amount,
+   total_odds, potential_payout)
+  VALUES (?, ?, ?, ?);
+
+INSERT INTO bet_selections
+  (bet_id, odds_id, event_id,
+   odds_at_placement, selection_type)
+  VALUES (?, ?, ?, ?, ?);
+
+INSERT INTO transactions
+  (account_id, user_id, type,
+   amount, status)
+  VALUES (?, ?, 'bet', ?, 'completed');
+
+COMMIT;
+\end{verbatim}
+
+\subsection{Query 2: Odds History for Visualization}
+The Event page shows a Chart.js line chart of how odds moved over
+the past seven days. This query pulls the full recorded history for
+all selections in a given event, ordered so Chart.js can group each
+line by selection name.
+
+\begin{verbatim}
+SELECT oh.recorded_at,
+       oh.decimal_odds,
+       o.selection_name,
+       o.market_type,
+       o.odds_id
+FROM odds_history oh
+JOIN odds o
+  ON oh.odds_id = o.odds_id
+WHERE oh.event_id = ?
+ORDER BY o.selection_name,
+         oh.recorded_at ASC;
+\end{verbatim}
+
+\subsection{Query 3: Insider Detection Feature Extraction}
+The research analysis begins by pulling all settled bet data in a
+single query joining four tables. The four detection features are then
+computed in application code from this result set. The
+\texttt{TIMESTAMPDIFF} call gives the number of minutes between bet
+placement and event start, which is used to flag late bets.
+
+\begin{verbatim}
+SELECT u.user_id, u.username,
+       b.stake_amount,
+       b.potential_payout,
+       b.status AS bet_status,
+       TIMESTAMPDIFF(MINUTE,
+         b.placed_at,
+         e.start_time) AS mins_before
+FROM users u
+JOIN bets b
+  ON b.user_id = u.user_id
+JOIN bet_selections bs
+  ON bs.bet_id = b.bet_id
+JOIN events e
+  ON e.event_id = bs.event_id
+WHERE b.status IN ('won', 'lost');
+\end{verbatim}
+
+%%-----------------------------------------------------------
+\section{Implementation Details}
+
+All nine pages communicate with the backend through a consistent
+pattern: the page's JavaScript sends a \texttt{fetch()} request to an
+Express route in \texttt{server.ts}, the route executes a SQL query
+through the connection pool in \texttt{db.ts}, and the result is
+returned as JSON. Credentials are stored in a \texttt{.env} file and
+excluded from version control so the database password is never
+committed to the repository.
+
+\subsection{User Registration}
+The registration endpoint hashes the submitted password with bcrypt
+before writing anything to the database, so plaintext passwords are
+never stored. It also auto-generates a username from the user's first
+and last name and creates a linked account row with a zero balance in a
+separate \texttt{INSERT}.
+
+\begin{verbatim}
+app.post('/register',
+  async (req, res) => {
+  const { firstname, lastname,
+          email, password } = req.body;
+
+  const hash =
+    await bcrypt.hash(password, 10);
+  const username =
+    `${firstname}${lastname}`
+      .toLowerCase();
+
+  const [result] = await db.query(
+    `INSERT INTO users
+      (username, email,
+       password_hash, date_of_birth)
+     VALUES (?, ?, ?, ?)`,
+    [username, email, hash,
+     '2000-01-01']
+  );
+  const { insertId } = result;
+
+  await db.query(
+    `INSERT INTO accounts
+      (user_id) VALUES (?)`,
+    [insertId]
+  );
+  res.status(201).json(
+    { success: true }
+  );
+});
+\end{verbatim}
+
+\subsection{User Authentication}
+The sign-in endpoint accepts either an email address or a username
+by checking for the presence of an \texttt{@} symbol in the submitted
+value. Bcrypt's \texttt{compare} function checks the submitted password
+against the stored hash without ever decrypting it.
+
+\begin{verbatim}
+app.post('/login',
+  async (req, res) => {
+  const { email, password } = req.body;
+  const isEmail = email.includes('@');
+
+  const [rows] = await db.query(
+    isEmail
+      ? `SELECT * FROM users
+           WHERE email = ?`
+      : `SELECT * FROM users
+           WHERE username = ?`,
+    [email]
+  );
+  const user = rows[0];
+  if (!user) {
+    res.status(401).json(
+      { error: 'Invalid credentials' }
+    );
+    return;
+  }
+  const ok = await bcrypt.compare(
+    password, user.password_hash
+  );
+  if (!ok) {
+    res.status(401).json(
+      { error: 'Invalid credentials' }
+    );
+    return;
+  }
+  res.json({
+    success: true,
+    user: {
+      id: user.user_id,
+      username: user.username,
+      email: user.email
+    }
+  });
+});
+\end{verbatim}
+
+%%-----------------------------------------------------------
+\section{Complete Working Prototype}
+
+The system includes nine fully functional interfaces.
+
+\subsection{Home}
+The landing page fetches live prediction markets from the Polymarket
+Gamma API and displays them alongside our own internal events. Each
+market shows the current probability as a percentage derived from live
+trading activity on Polymarket.
+
+\subsection{Markets}
+Users can browse all internal events, filter by sport category, and
+filter by status (upcoming, live, or finished). Clicking an event
+navigates to its detail page.
+
+\subsection{Event and Visualization}
+The event detail page shows current decimal odds for each selection and
+a seven-day odds history chart rendered with Chart.js. As the admin
+updates odds over time, the history table records each change, and the
+chart displays all selections as separate colored lines. Users can enter
+a stake amount and the page calculates the potential payout in real
+time. Submitting places the bet if the user's balance is sufficient.
+
+\subsection{Sign In and Register}
+The Sign In page accepts either an email address or a username and
+authenticates using bcrypt comparison. The Register page collects a
+first name, last name, email, and password, auto-generates a username,
+and creates the account with a zero balance.
+
+\subsection{Dashboard}
+Shows the user's recent bets with stake amount, potential payout, and
+current status. Resolved bets are color-coded: green for wins and red
+for losses, giving users a quick visual summary of their P\&L.
+
+\subsection{Account}
+Displays the user's current balance and allows them to deposit or
+withdraw funds. The page also shows the last 50 transactions so users
+can review their complete history.
+
+\subsection{Administration}
+The admin page provides tools for platform management: creating events
+and odds, resolving events (which automatically settles all associated
+bets and pays winners), seeding sports and research data, adjusting all
+account balances, and clearing the database. It is intended for
+demonstration and grading use.
+
+\subsection{Research}
+The Research page runs insider trader detection on the seeded dataset
+(see Section~\ref{sec:research}). Users click ``Run Both Methods'' to
+execute the analysis, then switch between tabs to compare Z-Score and
+K-Means results. A scatter plot updates to reflect the active tab.
+Clicking ``Reveal Ground Truth'' fetches labels from the
+\texttt{research\_seed\_truth} table and displays precision, recall,
+and F1 scores for each method.
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{home.png}
+  \caption{The Bull Market homepage displaying live Polymarket markets
+  and internal events with current outcome probabilities.}
+  \label{fig:home}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{signin.png}
+  \caption{The Sign In page, which accepts either an email address or
+  a username and authenticates with bcrypt.}
+  \label{fig:signin}
+\end{figure}
+
+\begin{figure}[h!]
+  \centering
+  \includegraphics[width=\linewidth]{register.png}
+  \caption{The Register page for creating a new account. A username is
+  auto-generated from the user's first and last name.}
+  \label{fig:register}
+\end{figure}
+
+%%-----------------------------------------------------------
+\section{Insider Trader Detection}
+\label{sec:research}
+
+Motivated by the findings of Mitts and
+Ofir~\cite{mitts2025iran}, we built a research module that applies
+two unsupervised machine learning methods to detect insider traders
+in a controlled, simulated dataset. Neither method is given any labels
+during training; they discover suspicious users entirely from
+behavioral patterns in the betting data.
+
+\subsection{Simulated Dataset}
+
+The dataset is generated using \texttt{@faker-js/faker} and seeded
+from the Admin page. It consists of 120 users across five behavioral
+archetypes, 80 events, and hundreds of settled bets:
+
+\begin{itemize}
+  \item \textbf{Insider (10 users):} High win rates, large stakes
+  placed within 4 hours of event start. Includes deliberate losses
+  to avoid a suspicious 100\% win rate and better simulate reality.
+  \item \textbf{Sharp Normal (30 users):} Skilled bettors with
+  above-average win rates through research and judgment, not inside
+  information.
+  \item \textbf{Average (30 users):} Typical recreational bettors
+  with moderate and mixed results.
+  \item \textbf{Recreational (30 users):} Casual bettors with small,
+  inconsistent stakes and below-average win rates.
+  \item \textbf{High Roller (20 users):} Large stakes but essentially
+  random outcomes; they spend a lot but have no edge.
+\end{itemize}
+
+The 10 insider users are the ground truth for evaluating detection
+accuracy. Their labels are stored in the
+\texttt{research\_seed\_truth} table, hidden from the detection
+algorithms, and only revealed when the user clicks the Reveal button.
+Users must have at least ten settled bets before they are included in
+the analysis to ensure statistical reliability.
+
+\subsection{Detection Features}
+
+Both methods use the same four features per user, grounded in the
+behavioral signals identified by Mitts and Ofir~\cite{mitts2025iran}:
+
+\begin{enumerate}
+  \item \textbf{Win Rate:} Wins divided by total settled bets.
+  \item \textbf{Average ROI:} Average net profit per bet relative to
+  the stake. A winning bet at 2.0x decimal odds yields $+100\%$ ROI;
+  a losing bet yields $-100\%$ ROI.
+  \item \textbf{Late Bet Ratio:} The fraction of bets placed within
+  4 hours of the event's start time. This captures the pattern of
+  acting on last-minute, non-public information.
+  \item \textbf{Stake Consistency:} The inverted coefficient of
+  variation of a user's stake amounts ($1 - \sigma/\mu$). Insiders
+  tend to bet large, consistent amounts when they have information,
+  while recreational bettors have high variability in their stakes.
+\end{enumerate}
+
+\subsection{Z-Score Method}
+
+Each feature is standardized across all users using the Z-score
+formula: $z = (x - \mu) / \sigma$. The four Z-scores are summed into
+a composite suspicion score. Stake consistency is inverted before
+scoring (low variability should add to suspicion, not subtract from
+it). Users are ranked from highest to lowest composite score, and the
+top 15 are flagged as suspected insiders. This is a heuristic
+method; it measures relative extremity but does not learn any
+underlying structure in the data.
+
+\subsection{K-Means Method}
+
+K-Means clustering ($k=2$) is applied to min-max normalized feature
+values using k-means++ initialization. The k-means++ strategy selects
+the first centroid at random and then probabilistically selects each
+subsequent centroid with likelihood proportional to its squared
+distance from the nearest existing centroid, which avoids the poor
+initializations that can occur with random seeding. The algorithm then
+iterates assignment and update steps until centroids converge.
+
+After clustering, the cluster with the higher mean win rate is labeled
+the ``suspected insiders'' cluster. Unlike Z-Score, K-Means does not
+require a fixed threshold; the cluster size is determined by the
+data's natural structure.
+
+\begin{table}[h]
+  \caption{Comparison of the two detection methods.}
+  \label{tab:methods}
+  \renewcommand{\arraystretch}{1.2}
+  \begin{tabular}{|l|l|l|}
+    \hline
+    \textbf{Property} & \textbf{Z-Score} & \textbf{K-Means} \\
+    \hline
+    Type              & Heuristic ranking & Clustering \\
+    Normalization     & Z-score ($\mu$=0) & Min-max (0--1) \\
+    Output            & Suspicion score   & Cluster label \\
+    Threshold         & Fixed top-15      & Data-driven \\
+    Initialization    & N/A               & k-means++ \\
+    Interpretability  & High              & Medium \\
+    \hline
+  \end{tabular}
+\end{table}
+
+\subsection{Visualization and Evaluation}
+
+After both methods run, the Research page displays a ranked table for
+each method and a scatter plot of Win Rate vs.\ Average ROI, colored
+by suspect status or cluster assignment. The scatter plot makes it
+easy to see visually how well each method separates the insider cluster
+from the general population. Clicking ``Reveal Ground Truth'' fetches
+the true labels from \texttt{research\_seed\_truth} and computes
+precision, recall, and F1 score for each method, making it easy to
+compare their relative effectiveness.
+
+%%-----------------------------------------------------------
+\section{Evaluation and Limitations}
+
+\subsection{What Works}
+The platform functions as a complete prediction market from end to end.
+Users can register, deposit, browse live events, place straight and
+parlay bets, and track their P\&L on the dashboard. Winning bets are
+automatically settled with the correct payout when an admin resolves
+an event. The atomic transaction for bet placement correctly handles
+concurrent requests without overdrafting accounts. The research module
+runs both detection methods on demand and produces quantitative
+accuracy metrics, making it straightforward to compare their
+performance.
+
+The integration of the Polymarket API demonstrates that the platform
+could be extended to display data from external prediction markets.
+The odds history visualization shows a full week of price movement and
+reflects changes immediately when new odds are entered through the
+admin panel.
+
+\subsection{Limitations}
+\begin{itemize}
+  \item \textbf{Simulated money:} The platform is not connected to any
+  real payment processor. All account balances are virtual and exist
+  only in the database.
+  \item \textbf{Local only:} The system requires XAMPP running locally
+  and cannot be accessed by external users without additional server
+  configuration.
+  \item \textbf{Session security:} User sessions are stored in
+  \texttt{localStorage}, which is not appropriate for a production
+  environment. A real deployment would use JWTs or server-side
+  session management with secure HTTP-only cookies.
+  \item \textbf{Synthetic research data:} The insider detection module
+  is evaluated on synthetic data only. Real-world detection performance
+  would likely differ since real insiders can adapt their behavior to
+  avoid detection.
+  \item \textbf{No email verification:} Users can register with any
+  email address without confirming ownership.
+  \item \textbf{Polymarket display only:} Live Polymarket data appears
+  on the homepage for context, but users can only bet on events created
+  through our admin panel.
+\end{itemize}
+
+%%-----------------------------------------------------------
+\section{Future Improvements}
+
+Given more time, we would prioritize the following improvements:
+
+\begin{itemize}
+  \item \textbf{Real payments:} Integrate a payment processor such as
+  Stripe for actual deposits and withdrawals, including KYC checks
+  required for regulated gambling platforms.
+  \item \textbf{Cloud hosting:} Deploy to AWS, Railway, or a similar
+  platform so the site is publicly accessible without requiring XAMPP.
+  \item \textbf{Secure sessions:} Replace \texttt{localStorage} with
+  server-side session management or signed JWT tokens stored in
+  HTTP-only cookies.
+  \item \textbf{Real-time updates:} Add WebSocket support using
+  Socket.io so odds update live across all connected clients without
+  requiring a page refresh.
+  \item \textbf{Live insider detection:} Run detection algorithms
+  continuously on real user bets as they accumulate, rather than only
+  on seeded synthetic data.
+  \item \textbf{Better ML models:} Explore more sophisticated
+  approaches such as isolation forests, random forests, or a simple
+  neural network classifier for insider trader detection.
+  \item \textbf{Mobile UI:} Improve the responsive design so all pages
+  work well on smaller screens.
+  \item \textbf{Bet limits and responsible gambling:} Add daily deposit
+  limits, self-exclusion options, and loss-limit warnings, which would
+  be legally required on a real platform.
+\end{itemize}
+
+%%-----------------------------------------------------------
+\nocite{jamilCS360}
+\bibliographystyle{ACM-Reference-Format}
+\bibliography{sample-base}
+
+\end{document}
+\endinput

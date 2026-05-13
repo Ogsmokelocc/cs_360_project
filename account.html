@@ -29,7 +29,7 @@
     .tx-icon-deposit::before { content: '↑'; }
     .tx-icon-win::before { content: '★'; }
     .tx-icon-withdrawal::before { content: '↓'; }
-    .tx-icon-bet::before { content: '🎯'; }
+    .tx-icon-bet::before { content: '●'; }
     .tx-icon-refund::before { content: '↺'; }
   </style>
 </head>
@@ -38,7 +38,7 @@
 <nav class="navbar navbar-expand-lg top-nav">
   <div class="container">
     <a class="navbar-brand d-flex align-items-center" href="index.html">
-      <img src="indian-cow-vector-silhouette-illustration_1193756-2634.avif" alt="logo" width="50" height="50" class="me-2">
+      <img src="cowpicture.avif" alt="logo" width="50" height="50" class="me-2">
       BULL MARKET
     </a>
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
@@ -140,7 +140,7 @@
   const user = JSON.parse(stored);
 
   document.getElementById('nav-auth').innerHTML = `
-    <span class="navbar-text me-3 fw-semibold">👤 ${user.username}</span>
+    <span class="navbar-text me-3 fw-semibold">${user.username}</span>
     <button class="btn btn-outline-dark btn-sm" onclick="logout()">Log out</button>`;
   function logout() { localStorage.removeItem('user'); window.location.href = 'index.html'; }
 

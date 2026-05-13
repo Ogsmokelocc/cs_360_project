@@ -1,2 +1,25 @@
+# Dependencies
 node_modules/
+
+# Environment variables (contains DB credentials)
 .env
+.env.local
+.env.*.local
+
+# Claude Code workspace settings
+.claude/
+
+# macOS
+.DS_Store
+
+# Logs
+*.log
+npm-debug.log*
+
+# TypeScript build output (if tsc is run directly)
+*.js.map
+*.d.ts
+*.d.ts.map
+
+# Misc leftover files
+cowpicture

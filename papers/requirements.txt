@@ -1,0 +1,119 @@
+Note: this is a RESEARCH PROJECT. 
+
+The requirements below are for TRADITIONAL projects. This was the advice:
+
+The announcement I sent out earlier today was for the traditional projects. If you are doing a research project, you will need to adapt your presentation to this traditional plan. Since you are doing a unique project, it is difficult to give you an exact outline for your four phase reports and presentations. Your reports and contents must track the traditional plan. Be innovative. If you need to discuss, please talk to me after class, or make an appointment, please.
+
+Project Phases
+Phase I
+Report (2 pages, ACM Conference Style PDF)
+
+Must include:
+
+    ER Diagram
+
+    Introduction
+
+        Your understanding of the project
+
+        Interpretation of requirements
+
+    Technology Stack
+
+        Database (e.g., PostgreSQL, Neo4j, MySQL, etc.)
+
+        Backend
+
+        Visualization tools
+
+    Project Plan
+
+    Timeline of Deliverables
+
+Presentation (5 minutes)
+
+Discuss:
+
+    System concept
+
+    ER model
+
+    Technology choice
+
+    Development timeline
+
+Phase II
+Report (4 pages, ACM Conference Style PDF)
+
+Expand Phase I and add:
+
+    Detailed Database Design
+
+    Normalization Discussion
+
+    Schema refinements
+
+    Screenshots of:
+
+        Current system state
+
+        Interfaces
+
+        Implemented functions
+
+Presentation (7 minutes)
+
+Discuss:
+
+    Progress vs. Phase I timeline
+
+    Changes to original plan
+
+    Technical challenges
+
+    Team dynamics (private comments allowed)
+
+Phase III
+Report (6 pages, ACM Conference Style PDF)
+
+Must include:
+
+    Expanded system architecture
+
+    Functional prototype description
+
+    Implementation details
+
+    All three required queries working (or nearly complete)
+
+    Preliminary results
+
+Presentation
+
+Live demo of prototype system.
+Phase IV (Final)
+Final Report (8 pages, ACM Conference Style PDF)
+
+Must include:
+
+    Finalized architecture
+
+    Complete working prototype
+
+    All required queries fully operational
+
+    Visualization demonstration
+
+    Evaluation and limitations
+
+    Future improvements
+
+Final Demo
+
+Live demonstration of:
+
+    System functionality
+
+    Query execution
+
+    Network visualizations
